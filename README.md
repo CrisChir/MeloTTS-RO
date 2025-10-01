@@ -11,7 +11,7 @@ MeloTTS RO is a forked of https://github.com/mesolitica/MeloTTS-MS based on http
 
 ## Improvement
 
-1. Use c and Malaya Speech normalizer, [melo/text/malay.py](melo/text/malay.py),
+1. Use c and Malaya Speech normalizer, [melo/text/malay.py](melo/text/malay.py),add [melo/text/malay.py](melo/text/romanian.py) added rodiacritic to requirements
 
 ```python
 text = 'hello nama saya.'
@@ -45,7 +45,7 @@ phones, tones, word2ph = g2p(text)
 2. Use Pretrained Malaysian BERT, [melo/text/malay_bert.py](melo/text/malay_bert.py).
    2.2
    ```
-    test a bert model for romanian language
+    test a bert model for romanian language added [melo/text/romanian_bert.py](melo/text/romanian_bert.py)
    ```
    
 4. Extend symbols, [melo/text/symbols.py](melo/text/symbols.py).
@@ -113,7 +113,9 @@ self.enc_p = TextEncoder(
 
 5. Use the official pretrained models after that extend the embedding size, [melo/train.py](melo/train.py),
 
-```python
+
+```
+python
 utils.load_checkpoint(
   hps.pretrain_G,
   net_g,
@@ -129,6 +131,25 @@ net_g.module.enc_p.tone_emb = net_g.module.get_resized_embeddings(old_embeddings
 
 print(net_g.module.enc_p.emb.weight.shape, net_g.module.enc_p.tone_emb.weight.shape)
 ```
+6. added a new function to utils
+```
+def distribute_phone(phone_len, word_len):
+    """
+    Distributes the phoneme count across the word's sub-tokens.
+    For example, if a word has 5 phonemes and 2 sub-tokens,
+    it might distribute them as [3, 2].
+    """
+    phones_per_word = phone_len // word_len
+    remaining_phones = phone_len % word_len
+    phone_distribution = []
+    for i in range(word_len):
+        phones = phones_per_word
+        if i < remaining_phones:
+            phones += 1
+        phone_distribution.append(phones)
+    return phone_distribution
+```
+   
 
 ## Usage
 - [Use without Installation](docs/quick_use.md)
