@@ -326,16 +326,58 @@ ms_symbols = [
 ]
 num_ms_tones = 2
 
+ro_symbols = [
+"a",
+"ə",
+"b",
+"d",
+"dʒ",
+"e",
+"f",
+"ɡ",
+"h",
+"i",
+"ɨ",
+"k",
+"l",
+"m",
+"n",
+"o",
+"p",
+"r",
+"s",
+"ʃ",
+"t",
+"ts",
+"tʃ",
+"u",
+"v",
+"z",
+"ʒ",
+"j",
+"w",
+"e̯a",
+"o̯a",
+"ă",
+"â",
+"î",
+"ș",
+"ț"
+]
+num_ro_tones = 1
+
 # combine all symbols
 normal_symbols = sorted(set(zh_symbols + ja_symbols + en_symbols + kr_symbols + es_symbols + fr_symbols + de_symbols + ru_symbols))
-symbols = [pad] + normal_symbols + pu_symbols + ms_symbols
+#symbols = [pad] + normal_symbols + pu_symbols + ms_symbols  #malay version
+symbols = [pad] + normal_symbols + pu_symbols + ro_symbols + ms_symbols
 sil_phonemes_ids = [symbols.index(i) for i in pu_symbols]
 
 # combine all tones
-num_tones = num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones + num_ms_tones
+num_tones = num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones + num_ro_tones
 
 # language maps
-language_id_map = {"ZH": 0, "JP": 1, "EN": 2, "ZH_MIX_EN": 3, 'KR': 4, 'ES': 5, 'SP': 5 ,'FR': 6, 'MS': 7, 'NULL': 8}
+#added Romanian
+language_id_map = {"ZH": 0, "JP": 1, "EN": 2, "ZH_MIX_EN": 3, 'KR': 4, 'ES': 5, 'SP': 5 ,'FR': 6, 'MS': 7, 'RO': 8,'NULL': 9}
 num_languages = len(language_id_map.keys())
 
 language_tone_start_map = {
@@ -347,6 +389,7 @@ language_tone_start_map = {
     "ES": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
     "SP": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
     "FR": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones,
+    "RO": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones,
     "MS": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones,
 }
 
