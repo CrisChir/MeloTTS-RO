@@ -7,11 +7,11 @@
 Original README at https://github.com/myshell-ai/MeloTTS
 
 ## Introduction
-MeloTTS MS is a forked of https://github.com/myshell-ai/MeloTTS to support Malay language, models and checkpoints with optimizer states released at https://huggingface.co/malaysia-ai/MeloTTS-MS
+MeloTTS RO is a forked of https://github.com/mesolitica/MeloTTS-MS based on https://github.com/myshell-ai/MeloTTS to support Malay and hopefully Romanian language.
 
 ## Improvement
 
-1. Use `ms` phonemizer and Malaya Speech normalizer, [melo/text/malay.py](melo/text/malay.py),
+1. Use c and Malaya Speech normalizer, [melo/text/malay.py](melo/text/malay.py),
 
 ```python
 text = 'hello nama saya.'
@@ -37,10 +37,58 @@ phones, tones, word2ph = g2p(text)
 [1, 4, 4, 4, 1, 1])
 """
 ```
+1.1 To do and test 1. Use `ro` phonemizer and Romanian Speech normalizer,
+
 
 2. Use Pretrained Malaysian BERT, [melo/text/malay_bert.py](melo/text/malay_bert.py).
-3. Extend symbols, [melo/text/symbols.py](melo/text/symbols.py).
-4. Hardcode the size of vocab and tone based on pretrained but use the new size during inference, [melo/models.py](melo/models.py), 
+   2.2
+   ```
+    test a bert model for romanian language
+   ```
+   
+4. Extend symbols, [melo/text/symbols.py](melo/text/symbols.py).
+```
+ro_symbols = [
+"a",
+"ə",
+"b",
+"d",
+"dʒ",
+"e",
+"f",
+"ɡ",
+"h",
+"i",
+"ɨ",
+"k",
+"l",
+"m",
+"n",
+"o",
+"p",
+"r",
+"s",
+"ʃ",
+"t",
+"ts",
+"tʃ",
+"u",
+"v",
+"z",
+"ʒ",
+"j",
+"w",
+"e̯a",
+"o̯a",
+"ă",
+"â",
+"î",
+"ș",
+"ț"
+]
+num_ro_tones = 1
+```
+6. Hardcode the size of vocab and tone based on pretrained but use the new size during inference, [melo/models.py](melo/models.py), 
 
 ```python
 self.enc_p = TextEncoder(
