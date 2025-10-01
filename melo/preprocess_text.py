@@ -95,7 +95,8 @@ def main(
                     os.makedirs(os.path.dirname(bert_path), exist_ok=True)
                     torch.save(bert.cpu(), bert_path)
                 except Exception as error:
-                    print("err!", line, error)
+                    # print("err!", line, error)
+                    print(f"err! on line: {line.strip()}", repr(error))
 
             out_file.close()
 
