@@ -37,6 +37,8 @@ phones, tones, word2ph = g2p(text)
 [1, 4, 4, 4, 1, 1])
 """
 ```
+
+
 1.1 To do and test 1. Use `ro` phonemizer and Romanian Speech normalizer,
 
 
@@ -47,7 +49,10 @@ phones, tones, word2ph = g2p(text)
    ```
    
 4. Extend symbols, [melo/text/symbols.py](melo/text/symbols.py).
+   
 ```
+Extend romanian: MeloTTS-RO/melo/text/symbols.py
+
 ro_symbols = [
 "a",
 "ə",
