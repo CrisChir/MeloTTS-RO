@@ -4,7 +4,7 @@ import os
 from functools import cache
 from transformers import AutoTokenizer
 from num2words import num2words
-from ro_diacritics import restore_diacritics
+# from ro_diacritics import restore_diacritics # be aware fasttext is not supported 
 
 # Import from our new utility file
 from .utils import distribute_phone
@@ -30,9 +30,10 @@ class RomanianNormalizer:
             else:
                 words.append(word)
         text = ' '.join(words)
-        
-        # Restore diacritics
-        text = restore_diacritics(text)
+        #### there is an incompatibility with torchtext
+        # # Restore diacritics
+        # text = restore_diacritics(text)
+        ######
 
         # Ensure the text ends with punctuation
         if add_fullstop and text[-1] not in ".?!":
