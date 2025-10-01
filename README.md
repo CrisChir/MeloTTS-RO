@@ -149,6 +149,10 @@ def distribute_phone(phone_len, word_len):
         phone_distribution.append(phones)
     return phone_distribution
 ```
+7. Update cleaner.py
+```
+add romanian in import and in map function
+```
    
 
 ## Usage
