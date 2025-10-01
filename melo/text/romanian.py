@@ -63,16 +63,59 @@ def text_normalize(text):
     normalized_text = normalizer.normalize(text, add_fullstop=True)
     return normalized_text
 
+# def g2p(text, pad_start_end=True):
+#     """Converts graphemes to phonemes for Romanian text."""
+#     global_phonemizer, separator = get_phonemizer()
+#     tokenizer = get_tokenizer()
+    
+#     # Tokenize text into sub-tokens (e.g., 'bună ziua' -> ['bună', 'ziua'])
+#     tokenized = tokenizer.tokenize(text)
+    
+#     # Group sub-tokens back into whole words
+#     # Example: ['recuno', '##ștință'] -> [['recuno', 'ștință']]
+#     ph_groups = []
+#     for t in tokenized:
+#         if not t.startswith("#"):
+#             ph_groups.append([t])
+#         else:
+#             ph_groups[-1].append(t.replace("#", ""))
+
+#     phones = []
+#     tones = []
+#     word2ph = []
+    
+#     for group in ph_groups:
+#         word = "".join(group)
+#         word_len = len(group) # Number of sub-tokens in this word
+
+#         # Phonemize the complete word
+#         phonemized_word = global_phonemizer.phonemize([word], separator=separator)[0].replace('|', '').strip()
+        
+#         # Split into individual phonemes
+#         splitted = [p for p in phonemized_word.split('-') if p]
+#         phone_len = len(splitted)
+        
+#         for s in splitted:
+#             phones.append(s)
+#             # Assign tone based on stress marker
+#             tones.append(1 if 'ˈ' in s else 0)
+
+#         # Distribute the total phone count among the sub-tokens of the word
+#         word2ph += distribute_phone(phone_len, word_len)
+
+#     if pad_start_end:
+#         phones = ["_"] + phones + ["_"]
+#         tones = [0] + tones + [0]
+#         # word2ph doesn't need padding here as it maps to BERT tokens, which have CLS/SEP
+        
+#     return phones, tones, word2ph
+
 def g2p(text, pad_start_end=True):
     """Converts graphemes to phonemes for Romanian text."""
     global_phonemizer, separator = get_phonemizer()
     tokenizer = get_tokenizer()
-    
-    # Tokenize text into sub-tokens (e.g., 'bună ziua' -> ['bună', 'ziua'])
     tokenized = tokenizer.tokenize(text)
     
-    # Group sub-tokens back into whole words
-    # Example: ['recuno', '##ștință'] -> [['recuno', 'ștință']]
     ph_groups = []
     for t in tokenized:
         if not t.startswith("#"):
@@ -86,29 +129,28 @@ def g2p(text, pad_start_end=True):
     
     for group in ph_groups:
         word = "".join(group)
-        word_len = len(group) # Number of sub-tokens in this word
-
-        # Phonemize the complete word
+        word_len = len(group)
         phonemized_word = global_phonemizer.phonemize([word], separator=separator)[0].replace('|', '').strip()
-        
-        # Split into individual phonemes
         splitted = [p for p in phonemized_word.split('-') if p]
         phone_len = len(splitted)
         
         for s in splitted:
             phones.append(s)
-            # Assign tone based on stress marker
             tones.append(1 if 'ˈ' in s else 0)
 
-        # Distribute the total phone count among the sub-tokens of the word
         word2ph += distribute_phone(phone_len, word_len)
 
     if pad_start_end:
         phones = ["_"] + phones + ["_"]
         tones = [0] + tones + [0]
-        # word2ph doesn't need padding here as it maps to BERT tokens, which have CLS/SEP
+        # =================================================================
+        # ADD THIS LINE BACK - THIS IS THE FIX
+        # It adds a count of 1 for the start token and 1 for the end token.
+        word2ph = [1] + word2ph + [1]
+        # =================================================================
         
     return phones, tones, word2ph
+
 
 def get_bert_feature(text, word2ph, device=None):
     """Imports and uses the Romanian BERT feature extractor."""
