@@ -152,6 +152,11 @@ def distribute_phone(phone_len, word_len):
 7. Update cleaner.py
 ```
 add romanian in import and in map function
+
+from . import chinese, japanese, english, chinese_mix, korean, french, spanish, malay, romanian
+
+language_module_map = {"ZH": chinese, "JP": japanese, "EN": english, 'ZH_MIX_EN': chinese_mix, 'KR': korean,
+                    'FR': french, 'SP': spanish, 'ES': spanish, 'MS': malay, 'RO': romanian}
 ```
    
 
