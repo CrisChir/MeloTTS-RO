@@ -150,12 +150,15 @@ def text_normalize(text):
 #         # =================================================================
         
 #     return phones, tones, word2ph
-def g2p(text, pad_start_end=True):
-    """Converts graphemes to phonemes for Romanian text."""
+def g2p(text): # Removed pad_start_end argument
+    """
+    Converts graphemes to phonemes.
+    This function should return RAW, UNPADDED lists.
+    """
     global_phonemizer, separator = get_phonemizer()
     tokenizer = get_tokenizer()
     tokenized = tokenizer.tokenize(text)
-    
+
     ph_groups = []
     for t in tokenized:
         if not t.startswith("#"):
@@ -166,30 +169,22 @@ def g2p(text, pad_start_end=True):
     phones = []
     tones = []
     word2ph = []
-    
+
     for group in ph_groups:
         word = "".join(group)
         word_len = len(group)
         phonemized_word = global_phonemizer.phonemize([word], separator=separator)[0].replace('|', '').strip()
         splitted = [p for p in phonemized_word.split('-') if p]
         phone_len = len(splitted)
-        
+
         for s in splitted:
             phones.append(s)
             tones.append(1 if 'ˈ' in s else 0)
 
         word2ph += distribute_phone(phone_len, word_len)
 
-    if pad_start_end:
-        phones = ["_"] + phones + ["_"]
-        tones = [0] + tones + [0]
-        # =================================================================
-        # REMOVE THIS LINE - THIS IS THE FIX
-        # The word2ph list should NOT be padded as it's used to map
-        # against the unpadded BERT token embeddings.
-        # word2ph = [1] + word2ph + [1]  <-- DELETE OR COMMENT OUT THIS LINE
-        # =================================================================
-        
+    # REMOVED ALL PADDING LOGIC FROM THIS FUNCTION
+    # It now returns the pure, unpadded data.
     return phones, tones, word2ph
 
 def get_bert_feature(text, word2ph, device=None):
