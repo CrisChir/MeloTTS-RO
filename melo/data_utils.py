@@ -177,77 +177,58 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
     #     tone = torch.LongTensor(tone)
     #     language = torch.LongTensor(language)
     #     return bert, ja_bert, phone, tone, language
-    def get_text(self, text, tone, language_str, wav_path):
+    def get_text(self, text, phones, tones, word2ph, language_str, wav_path, sid):
         """
         Processes the phoneme, tone, and language strings from the metadata file,
         loads the corresponding BERT features, and converts them to tensors.
     
-        This version is corrected to find BERT files in the '/kaggle/working/' directory.
+        This is the final corrected version with a signature that matches its caller.
         """
-        # The 'text' input is actually a string of space-separated phonemes
-        phone = text.split(" ")
-        # The 'tone' input is a string of space-separated tone IDs
-        tone = [int(i) for i in tone.split(" ")]
-        # The language string is converted to its numerical ID
+        # NOTE THE CHANGE IN ARGUMENTS:
+        # 'text' is the normalized text (unused here)
+        # 'phones' is the string of space-separated phonemes
+        # 'tones' is the string of space-separated tones
+        
+        # Use the 'phones' and 'tones' arguments that are passed in
+        phone = phones.split(" ")
+        tone = [int(i) for i in tones.split(" ")]
         language = self.language_id_map[language_str]
     
-        # Convert phonemes, tones, and language ID to numerical tensors
         phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
-
-        # Initialize BERT features to None
+    
         bert = None
         ja_bert = None
-
-        if self.use_bert:
-            # --- THIS IS THE CRITICAL FIX ---
-            # The training data loader needs to know where the preprocessed BERT files are.
-            # We re-map the path from the read-only input directory to the writable working directory.
     
-            # 1. Define the prefixes for input and output directories.
-            #    This makes the logic clear and easy to change.
+        if self.use_bert:
             INPUT_DATA_PREFIX = '/kaggle/input/'
             OUTPUT_BERT_PREFIX = '/kaggle/working/bert_features/'
     
-            # 2. Calculate the relative path of the audio file.
-            #    For a wav_path like '/kaggle/input/my-dataset/wavs/audio.wav',
-            #    this will result in 'my-dataset/wavs/audio.wav'.
             relative_path = os.path.relpath(wav_path, INPUT_DATA_PREFIX)
-            
-            # 3. Construct the correct path to the .bert.pt file.
-            #    This will now point to, for example:
-            #    '/kaggle/working/bert_features/my-dataset/wavs/audio.bert.pt'
             bert_path = os.path.join(OUTPUT_BERT_PREFIX, relative_path.replace(".wav", ".bert.pt"))
             
             try:
-                # 4. Load the BERT tensor from the corrected path.
                 bert = torch.load(bert_path)
             except FileNotFoundError:
-                # This provides a much clearer error message if a file is missing.
                 print(f"\n--- FATAL ERROR: BERT file not found! ---")
-                print(f"The training data loader could not find the required .bert.pt file.")
                 print(f"Original WAV path: {wav_path}")
                 print(f"Attempted BERT path: {bert_path}")
-                print(f"Please ensure your preprocessing script ran successfully and that the output path here matches the save path in preprocess_text.py.")
-                # Stop the training process forcefully.
+                print(f"Please ensure your preprocessing script ran successfully.")
                 raise
             except Exception as e:
                 print(f"\n--- FATAL ERROR: Could not load BERT file: {bert_path} ---")
                 print(f"An unexpected error occurred: {e}")
                 raise
     
-        # This part handles a separate feature for Japanese BERT.
-        # For Romanian, this will be skipped.
         if self.use_ja_bert:
             ja_bert_path = wav_path.replace(".wav", ".ja_bert.pt")
             try:
                 ja_bert = torch.load(ja_bert_path)
-                # ja_bert can be None
                 if ja_bert is not None:
-                    # To save space, we use fp16 for ja_bert
                     ja_bert = ja_bert.half()
             except:
                 ja_bert = None
     
+        # The function now returns the correct variables
         return bert, ja_bert, phone, tone, language
  
     def get_sid(self, sid):
