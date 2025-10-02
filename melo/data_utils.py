@@ -211,14 +211,18 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         # 'tones' is the string of space-separated tones
         
         # Use the 'phones' and 'tones' arguments that are passed in
-        phone = phones.split(" ")
-        tone = [int(i) for i in tones.split(" ")]
+        # phone = phones.split(" ")
+        phone = phones
+        tone = [int(i) for i in tones] # The tones still need to be converted from str to int
         language = self.language_id_map[language_str]
-    
         phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
-    
         bert = None
         ja_bert = None
+        # tone = [int(i) for i in tones.split(" ")]
+        # language = self.language_id_map[language_str]
+        # phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
+        # bert = None
+        # ja_bert = None
     
         if self.use_bert:
             INPUT_DATA_PREFIX = '/kaggle/input/'
