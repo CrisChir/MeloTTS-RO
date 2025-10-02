@@ -178,12 +178,12 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
     #     language = torch.LongTensor(language)
     #     return bert, ja_bert, phone, tone, language
     def get_text(self, text, tone, language_str, wav_path):
-    """
-    Processes the phoneme, tone, and language strings from the metadata file,
-    loads the corresponding BERT features, and converts them to tensors.
-
-    This version is corrected to find BERT files in the '/kaggle/working/' directory.
-    """
+        """
+        Processes the phoneme, tone, and language strings from the metadata file,
+        loads the corresponding BERT features, and converts them to tensors.
+    
+        This version is corrected to find BERT files in the '/kaggle/working/' directory.
+        """
         # The 'text' input is actually a string of space-separated phonemes
         phone = text.split(" ")
         # The 'tone' input is a string of space-separated tone IDs
