@@ -32,7 +32,12 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         self.spk_map = hparams.spk2id
         self.hparams = hparams
         self.disable_bert = getattr(hparams, "disable_bert", False)
-
+        # --- THIS IS THE FIX ---
+        # 1. Import the language map from your central symbols file.
+        from text.symbols import language_id_map
+        # 2. Assign it to the class instance so other functions can access it.
+        self.language_id_map = language_id_map
+        # --- END OF FIX ---
         self.use_mel_spec_posterior = getattr(
             hparams, "use_mel_posterior_encoder", False
         )
