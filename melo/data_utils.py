@@ -103,7 +103,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
     #     sid = int(getattr(self.spk_map, sid, '0'))
     #     sid = torch.LongTensor([sid])
     #     return (phones, spec, wav, sid, tone, language, bert, ja_bert)
+    
     def get_audio_text_speaker_pair(self, audiopath_sid_text):
+        # All of these lines MUST be indented from the 'def' line above.
         # audiopath_sid_text[0]: wav path
         # audiopath_sid_text[1]: speaker id
         # audiopath_sid_text[2]: language id
@@ -111,23 +113,18 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         # audiopath_sid_text[4]: phones
         # audiopath_sid_text[5]: tones
         # audiopath_sid_text[6]: word2ph
-    
-        # --- THIS IS THE FIX ---
-        # The original code did not unpack and pass all the necessary arguments.
-        # We now correctly unpack all fields from the metadata line.
         wav_path, sid, language_str, text, phones, tones, word2ph = audiopath_sid_text
         
-        # Call get_text with ALL the required arguments.
         bert, ja_bert, phones, tone, language = self.get_text(
             text, phones, tones, word2ph, language_str, wav_path, sid
         )
         
-        # The rest of the function remains the same.
         spec, wav = self.get_audio(wav_path)
         sid = self.spk2id[sid]
         sid = torch.LongTensor([int(sid)])
-    
-    return (phones, tone, language, spec, wav, sid, bert, ja_bert)
+        
+        # This return statement MUST also be indented.
+        return (phones, tone, language, spec, wav, sid, bert, ja_bert)
     def get_audio(self, filename):
         audio_norm, sampling_rate = load_wav_to_torch(filename, self.sampling_rate)
         if sampling_rate != self.sampling_rate:
