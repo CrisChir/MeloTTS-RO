@@ -11,133 +11,116 @@ from utils import load_wav_to_torch_librosa as load_wav_to_torch
 from text import cleaned_text_to_sequence, get_bert
 import numpy as np
 
+import os
+import torch
+import torch.utils.data
+from melo.text import cleaned_text_to_sequence
+from melo.utils.utils import load_wav_to_torch, load_filepaths_and_text
+from melo.utils.mel_processing import spectrogram_torch
+
 """Multi speaker version"""
-
-
 class TextAudioSpeakerLoader(torch.utils.data.Dataset):
     """
-    1) loads audio, speaker_id, text pairs
+    1) loads audio, text pairs
     2) normalizes text and converts them to sequences of integers
     3) computes spectrograms from audio files.
     """
-
     def __init__(self, audiopaths_sid_text, hparams):
-
-
-
-        self.audiopaths_sid_text = self.load_filepaths_and_text(audiopaths_sid_text)
-        self.max_wav_value = hparams.data.max_wav_value
-        self.sampling_rate = hparams.data.sampling_rate
-        self.filter_length = hparams.data.filter_length
-        self.hop_length = hparams.data.hop_length
-        self.win_length = hparams.data.win_length
-        self.cleaned_text = hparams.data.cleaned_text
-        self.add_blank = hparams.data.add_blank
-        self.min_text_len = getattr(hparams.data, "min_text_len", 1)
-        self.max_text_len = getattr(hparams.data, "max_text_len", 1000)
-        self.spk2id = hparams.data.spk2id
-
-
-        
-        self.audiopaths_sid_text = load_filepaths_and_text(audiopaths_sid_text)
-        # self.max_wav_value = hparams.max_wav_value
-        # self.sampling_rate = hparams.sampling_rate
-        # self.filter_length = hparams.filter_length
-        # self.hop_length = hparams.hop_length
-        # self.win_length = hparams.win_length
-        # self.sampling_rate = hparams.sampling_rate
-        self.spk_map = hparams.spk2id
+        # This is the correct __init__ function we built
         self.hparams = hparams
-        self.disable_bert = getattr(hparams, "disable_bert", False)
-        # --- THIS IS THE FIX ---
-        # We were missing these lines. They read the configuration from your JSON file.
+        self.audiopaths_sid_text = load_filepaths_and_text(audiopaths_sid_text)
+        self.max_wav_value = self.hparams.data.max_wav_value
+        self.sampling_rate = self.hparams.data.sampling_rate
+        self.filter_length = self.hparams.data.filter_length
+        self.hop_length = self.hparams.data.hop_length
+        self.win_length = self.hparams.data.win_length
+        self.cleaned_text = self.hparams.data.cleaned_text
+        self.add_blank = self.hparams.data.add_blank
+        self.min_text_len = getattr(self.hparams.data, "min_text_len", 1)
+        self.max_text_len = getattr(self.hparams.data, "max_text_len", 1000)
+        self.spk2id = self.hparams.data.spk2id
+
         from text.symbols import language_id_map
         self.language_id_map = language_id_map
-        self.use_bert = getattr(hparams.model, "use_bert", False)
-        self.use_ja_bert = getattr(hparams.model, "use_ja_bert", False)
+        self.use_bert = getattr(self.hparams.model, "use_bert", False)
+        self.use_ja_bert = getattr(self.hparams.model, "use_ja_bert", False)
+
         self._filter()
         self.spec_loader = Spectrogram()
-        # --- END OF FIX ---
-        self.use_mel_spec_posterior = getattr(
-            hparams, "use_mel_posterior_encoder", False
-        )
-        if self.use_mel_spec_posterior:
-            self.n_mel_channels = getattr(hparams, "n_mel_channels", 80)
-
-        self.cleaned_text = getattr(hparams, "cleaned_text", False)
-
-        self.add_blank = hparams.add_blank
-        self.min_text_len = getattr(hparams, "min_text_len", 1)
-        self.max_text_len = getattr(hparams, "max_text_len", 300)
-
-        random.seed(1234)
-        random.shuffle(self.audiopaths_sid_text)
-        self._filter()
-
 
     def _filter(self):
         """
         Filter text & store spec lengths
         """
-        # Store spectrogram lengths for Bucketing
-        # wav_length ~= file_size / (wav_channels * Bytes per dim) = file_size / (1 * 2)
-        # spec_length = wav_length // hop_length
-
+        # Store spectrogram lengths for bucketing
+        # wav_length ~= file_size / (wav_channels * Bytes per sample) = file_size / (1 * 2)
+        # spec_length = (wav_length // hop_length) + 1
         audiopaths_sid_text_new = []
         lengths = []
-        skipped = 0
-        logger.info("Init dataset...")
-        for item in tqdm(
-            self.audiopaths_sid_text
-        ):
-            try:
-                _id, spk, language, text, phones, tone, word2ph = item
-            except:
-                print(item)
-                raise
-            audiopath = f"{_id}"
-            if self.min_text_len <= len(phones) and len(phones) <= self.max_text_len:
-                phones = phones.split(" ")
-                tone = [int(i) for i in tone.split(" ")]
-                word2ph = [int(i) for i in word2ph.split(" ")]
-                audiopaths_sid_text_new.append(
-                    [audiopath, spk, language, text, phones, tone, word2ph]
-                )
+        for audiopath, sid, language, text, phones, tones, word2ph in self.audiopaths_sid_text:
+            if self.min_text_len <= len(phones.split(" ")) and len(phones.split(" ")) <= self.max_text_len:
+                audiopaths_sid_text_new.append([audiopath, sid, language, text, phones, tones, word2ph])
                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
-            else:
-                skipped += 1
-        logger.info(f'min: {min(lengths)}; max: {max(lengths)}' )
-        logger.info(
-            "skipped: "
-            + str(skipped)
-            + ", total: "
-            + str(len(self.audiopaths_sid_text))
-        )
         self.audiopaths_sid_text = audiopaths_sid_text_new
         self.lengths = lengths
 
-    # def get_audio_text_speaker_pair(self, audiopath_sid_text):
-    #     # separate filename, speaker_id and text
-    #     audiopath, sid, language, text, phones, tone, word2ph = audiopath_sid_text
+    def get_audio(self, filename):
+        audio, sampling_rate = load_wav_to_torch(filename, self.sampling_rate)
+        if sampling_rate != self.sampling_rate:
+            raise ValueError("{} {} SR doesn't match target {} SR".format(
+                sampling_rate, self.sampling_rate))
+        audio_norm = audio / self.max_wav_value
+        audio_norm = audio_norm.unsqueeze(0)
+        spec_filename = filename.replace(".wav", ".spec.pt")
+        # Following the pattern of the original code, spec is not cached
+        spec = spectrogram_torch(audio_norm, self.filter_length,
+                                 self.sampling_rate, self.hop_length, self.win_length,
+                                 center=False)
+        spec = torch.squeeze(spec, 0)
+        return spec, audio_norm
 
-    #     bert, ja_bert, phones, tone, language = self.get_text(
-    #         text, word2ph, phones, tone, language, audiopath
-    #     )
+    def get_text(self, text, phones, tones, word2ph, language_str, wav_path, sid):
+        # This is the correct get_text function we built
+        phone = phones.split(" ")
+        tone = [int(i) for i in tones.split(" ")]
+        language = self.language_id_map[language_str]
 
-    #     spec, wav = self.get_audio(audiopath)
-    #     sid = int(getattr(self.spk_map, sid, '0'))
-    #     sid = torch.LongTensor([sid])
-    #     return (phones, spec, wav, sid, tone, language, bert, ja_bert)
-    
+        phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
+
+        bert = None
+        ja_bert = None
+
+        if self.use_bert:
+            INPUT_DATA_PREFIX = '/kaggle/input/'
+            OUTPUT_BERT_PREFIX = '/kaggle/working/bert_features/'
+            relative_path = os.path.relpath(wav_path, INPUT_DATA_PREFIX)
+            bert_path = os.path.join(OUTPUT_BERT_PREFIX, relative_path.replace(".wav", ".bert.pt"))
+            
+            try:
+                bert = torch.load(bert_path)
+            except FileNotFoundError:
+                print(f"\n--- FATAL ERROR: BERT file not found! ---")
+                print(f"Original WAV path: {wav_path}")
+                print(f"Attempted BERT path: {bert_path}")
+                raise
+            except Exception as e:
+                print(f"\n--- FATAL ERROR: Could not load BERT file: {bert_path} ---")
+                print(f"An unexpected error occurred: {e}")
+                raise
+
+        if self.use_ja_bert:
+            ja_bert_path = wav_path.replace(".wav", ".ja_bert.pt")
+            try:
+                ja_bert = torch.load(ja_bert_path)
+                if ja_bert is not None:
+                    ja_bert = ja_bert.half()
+            except:
+                ja_bert = None
+        
+        return bert, ja_bert, phone, tone, language
+
     def get_audio_text_speaker_pair(self, audiopath_sid_text):
-        # All of these lines MUST be indented from the 'def' line above.
-        # audiopath_sid_text[0]: wav path
-        # audiopath_sid_text[1]: speaker id
-        # audiopath_sid_text[2]: language id
-        # audiopath_sid_text[3]: text
-        # audiopath_sid_text[4]: phones
-        # audiopath_sid_text[5]: tones
-        # audiopath_sid_text[6]: word2ph
+        # This is the correct get_audio_text_speaker_pair function we built
         wav_path, sid, language_str, text, phones, tones, word2ph = audiopath_sid_text
         
         bert, ja_bert, phones, tone, language = self.get_text(
@@ -148,148 +131,303 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         sid = self.spk2id[sid]
         sid = torch.LongTensor([int(sid)])
         
-        # This return statement MUST also be indented.
         return (phones, tone, language, spec, wav, sid, bert, ja_bert)
-    def get_audio(self, filename):
-        audio_norm, sampling_rate = load_wav_to_torch(filename, self.sampling_rate)
-        if sampling_rate != self.sampling_rate:
-            raise ValueError(
-                "{} {} SR doesn't match target {} SR".format(
-                    filename, sampling_rate, self.sampling_rate
-                )
-            )
-        # NOTE: normalize has been achieved by torchaudio
-        # audio_norm = audio / self.max_wav_value
-        audio_norm = audio_norm.unsqueeze(0)
-        if self.use_mel_spec_posterior:
-            spec = mel_spectrogram_torch(
-                audio_norm,
-                self.filter_length,
-                self.n_mel_channels,
-                self.sampling_rate,
-                self.hop_length,
-                self.win_length,
-                self.hparams.mel_fmin,
-                self.hparams.mel_fmax,
-                center=False,
-            )
-        else:
-            spec = spectrogram_torch(
-                audio_norm,
-                self.filter_length,
-                self.sampling_rate,
-                self.hop_length,
-                self.win_length,
-                center=False,
-            )
-        spec = torch.squeeze(spec, 0)
-        return spec, audio_norm
-    #Because in kaggle bert is saved local  
-    # def get_text(self, text, word2ph, phone, tone, language_str, wav_path):
-    #     phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
-    #     if self.add_blank:
-    #         phone = commons.intersperse(phone, 0)
-    #         tone = commons.intersperse(tone, 0)
-    #         language = commons.intersperse(language, 0)
-    #         for i in range(len(word2ph)):
-    #             word2ph[i] = word2ph[i] * 2
-    #         word2ph[0] += 1
-    #     bert_path = wav_path.replace(".wav", ".bert.pt")
-    #     try:
-    #         bert = torch.load(bert_path)
-    #         assert bert.shape[-1] == len(phone)
-    #     except Exception as e:
-    #         print(e, wav_path, bert_path, bert.shape, len(phone))
-    #         bert = get_bert(text, word2ph, language_str)
-    #         torch.save(bert, bert_path)
-    #         assert bert.shape[-1] == len(phone), phone
-
-    #     if self.disable_bert:
-    #         bert = torch.zeros(1024, len(phone))
-    #         ja_bert = torch.zeros(768, len(phone))
-    #     else:
-    #         if language_str in ["ZH"]:
-    #             bert = bert
-    #             ja_bert = torch.zeros(768, len(phone))
-    #         elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", 'SP', 'ES', 'FR', 'DE', 'RU', 'MS']:
-    #             ja_bert = bert
-    #             bert = torch.zeros(1024, len(phone))
-    #         else:
-    #             raise
-    #             bert = torch.zeros(1024, len(phone))
-    #             ja_bert = torch.zeros(768, len(phone))
-    #     assert bert.shape[-1] == len(phone)
-    #     phone = torch.LongTensor(phone)
-    #     tone = torch.LongTensor(tone)
-    #     language = torch.LongTensor(language)
-    #     return bert, ja_bert, phone, tone, language
-    def get_text(self, text, phones, tones, word2ph, language_str, wav_path, sid):
-        """
-        Processes the phoneme, tone, and language strings from the metadata file,
-        loads the corresponding BERT features, and converts them to tensors.
-    
-        This is the final corrected version with a signature that matches its caller.
-        """
-        # NOTE THE CHANGE IN ARGUMENTS:
-        # 'text' is the normalized text (unused here)
-        # 'phones' is the string of space-separated phonemes
-        # 'tones' is the string of space-separated tones
-        
-        # Use the 'phones' and 'tones' arguments that are passed in
-        # phone = phones.split(" ")
-        phone = phones
-        tone = [int(i) for i in tones] # The tones still need to be converted from str to int
-        language = self.language_id_map[language_str]
-        phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
-        bert = None
-        ja_bert = None
-        # tone = [int(i) for i in tones.split(" ")]
-        # language = self.language_id_map[language_str]
-        # phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
-        # bert = None
-        # ja_bert = None
-    
-        if self.use_bert:
-            INPUT_DATA_PREFIX = '/kaggle/input/'
-            OUTPUT_BERT_PREFIX = '/kaggle/working/bert_features/'
-    
-            relative_path = os.path.relpath(wav_path, INPUT_DATA_PREFIX)
-            bert_path = os.path.join(OUTPUT_BERT_PREFIX, relative_path.replace(".wav", ".bert.pt"))
-            
-            try:
-                bert = torch.load(bert_path)
-            except FileNotFoundError:
-                print(f"\n--- FATAL ERROR: BERT file not found! ---")
-                print(f"Original WAV path: {wav_path}")
-                print(f"Attempted BERT path: {bert_path}")
-                print(f"Please ensure your preprocessing script ran successfully.")
-                raise
-            except Exception as e:
-                print(f"\n--- FATAL ERROR: Could not load BERT file: {bert_path} ---")
-                print(f"An unexpected error occurred: {e}")
-                raise
-    
-        if self.use_ja_bert:
-            ja_bert_path = wav_path.replace(".wav", ".ja_bert.pt")
-            try:
-                ja_bert = torch.load(ja_bert_path)
-                if ja_bert is not None:
-                    ja_bert = ja_bert.half()
-            except:
-                ja_bert = None
-    
-        # The function now returns the correct variables
-        return bert, ja_bert, phone, tone, language
- 
-    def get_sid(self, sid):
-        sid = torch.LongTensor([int(sid)])
-        return sid
 
     def __getitem__(self, index):
         return self.get_audio_text_speaker_pair(self.audiopaths_sid_text[index])
 
     def __len__(self):
         return len(self.audiopaths_sid_text)
+
+class Spectrogram(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, audio_norm, filter_length=2048,
+                sampling_rate=44100, hop_length=512, win_length=2048,
+                center=False):
+        spec = spectrogram_torch(audio_norm, filter_length,
+                                 sampling_rate, hop_length, win_length,
+                                 center=center)
+        spec = torch.squeeze(spec, 0)
+        return spec
+
+# class TextAudioSpeakerLoader(torch.utils.data.Dataset):
+#     """
+#     1) loads audio, speaker_id, text pairs
+#     2) normalizes text and converts them to sequences of integers
+#     3) computes spectrograms from audio files.
+#     """
+
+#     def __init__(self, audiopaths_sid_text, hparams):
+
+
+
+#         self.audiopaths_sid_text = self.load_filepaths_and_text(audiopaths_sid_text)
+#         self.max_wav_value = hparams.data.max_wav_value
+#         self.sampling_rate = hparams.data.sampling_rate
+#         self.filter_length = hparams.data.filter_length
+#         self.hop_length = hparams.data.hop_length
+#         self.win_length = hparams.data.win_length
+#         self.cleaned_text = hparams.data.cleaned_text
+#         self.add_blank = hparams.data.add_blank
+#         self.min_text_len = getattr(hparams.data, "min_text_len", 1)
+#         self.max_text_len = getattr(hparams.data, "max_text_len", 1000)
+#         self.spk2id = hparams.data.spk2id
+
+
+        
+#         self.audiopaths_sid_text = load_filepaths_and_text(audiopaths_sid_text)
+#         # self.max_wav_value = hparams.max_wav_value
+#         # self.sampling_rate = hparams.sampling_rate
+#         # self.filter_length = hparams.filter_length
+#         # self.hop_length = hparams.hop_length
+#         # self.win_length = hparams.win_length
+#         # self.sampling_rate = hparams.sampling_rate
+#         self.spk_map = hparams.spk2id
+#         self.hparams = hparams
+#         self.disable_bert = getattr(hparams, "disable_bert", False)
+#         # --- THIS IS THE FIX ---
+#         # We were missing these lines. They read the configuration from your JSON file.
+#         from text.symbols import language_id_map
+#         self.language_id_map = language_id_map
+#         self.use_bert = getattr(hparams.model, "use_bert", False)
+#         self.use_ja_bert = getattr(hparams.model, "use_ja_bert", False)
+#         self._filter()
+#         self.spec_loader = Spectrogram()
+#         # --- END OF FIX ---
+#         self.use_mel_spec_posterior = getattr(
+#             hparams, "use_mel_posterior_encoder", False
+#         )
+#         if self.use_mel_spec_posterior:
+#             self.n_mel_channels = getattr(hparams, "n_mel_channels", 80)
+
+#         self.cleaned_text = getattr(hparams, "cleaned_text", False)
+
+#         self.add_blank = hparams.add_blank
+#         self.min_text_len = getattr(hparams, "min_text_len", 1)
+#         self.max_text_len = getattr(hparams, "max_text_len", 300)
+
+#         random.seed(1234)
+#         random.shuffle(self.audiopaths_sid_text)
+#         self._filter()
+
+
+#     def _filter(self):
+#         """
+#         Filter text & store spec lengths
+#         """
+#         # Store spectrogram lengths for Bucketing
+#         # wav_length ~= file_size / (wav_channels * Bytes per dim) = file_size / (1 * 2)
+#         # spec_length = wav_length // hop_length
+
+#         audiopaths_sid_text_new = []
+#         lengths = []
+#         skipped = 0
+#         logger.info("Init dataset...")
+#         for item in tqdm(
+#             self.audiopaths_sid_text
+#         ):
+#             try:
+#                 _id, spk, language, text, phones, tone, word2ph = item
+#             except:
+#                 print(item)
+#                 raise
+#             audiopath = f"{_id}"
+#             if self.min_text_len <= len(phones) and len(phones) <= self.max_text_len:
+#                 phones = phones.split(" ")
+#                 tone = [int(i) for i in tone.split(" ")]
+#                 word2ph = [int(i) for i in word2ph.split(" ")]
+#                 audiopaths_sid_text_new.append(
+#                     [audiopath, spk, language, text, phones, tone, word2ph]
+#                 )
+#                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
+#             else:
+#                 skipped += 1
+#         logger.info(f'min: {min(lengths)}; max: {max(lengths)}' )
+#         logger.info(
+#             "skipped: "
+#             + str(skipped)
+#             + ", total: "
+#             + str(len(self.audiopaths_sid_text))
+#         )
+#         self.audiopaths_sid_text = audiopaths_sid_text_new
+#         self.lengths = lengths
+
+#     # def get_audio_text_speaker_pair(self, audiopath_sid_text):
+#     #     # separate filename, speaker_id and text
+#     #     audiopath, sid, language, text, phones, tone, word2ph = audiopath_sid_text
+
+#     #     bert, ja_bert, phones, tone, language = self.get_text(
+#     #         text, word2ph, phones, tone, language, audiopath
+#     #     )
+
+#     #     spec, wav = self.get_audio(audiopath)
+#     #     sid = int(getattr(self.spk_map, sid, '0'))
+#     #     sid = torch.LongTensor([sid])
+#     #     return (phones, spec, wav, sid, tone, language, bert, ja_bert)
+    
+#     def get_audio_text_speaker_pair(self, audiopath_sid_text):
+#         # All of these lines MUST be indented from the 'def' line above.
+#         # audiopath_sid_text[0]: wav path
+#         # audiopath_sid_text[1]: speaker id
+#         # audiopath_sid_text[2]: language id
+#         # audiopath_sid_text[3]: text
+#         # audiopath_sid_text[4]: phones
+#         # audiopath_sid_text[5]: tones
+#         # audiopath_sid_text[6]: word2ph
+#         wav_path, sid, language_str, text, phones, tones, word2ph = audiopath_sid_text
+        
+#         bert, ja_bert, phones, tone, language = self.get_text(
+#             text, phones, tones, word2ph, language_str, wav_path, sid
+#         )
+        
+#         spec, wav = self.get_audio(wav_path)
+#         sid = self.spk2id[sid]
+#         sid = torch.LongTensor([int(sid)])
+        
+#         # This return statement MUST also be indented.
+#         return (phones, tone, language, spec, wav, sid, bert, ja_bert)
+#     def get_audio(self, filename):
+#         audio_norm, sampling_rate = load_wav_to_torch(filename, self.sampling_rate)
+#         if sampling_rate != self.sampling_rate:
+#             raise ValueError(
+#                 "{} {} SR doesn't match target {} SR".format(
+#                     filename, sampling_rate, self.sampling_rate
+#                 )
+#             )
+#         # NOTE: normalize has been achieved by torchaudio
+#         # audio_norm = audio / self.max_wav_value
+#         audio_norm = audio_norm.unsqueeze(0)
+#         if self.use_mel_spec_posterior:
+#             spec = mel_spectrogram_torch(
+#                 audio_norm,
+#                 self.filter_length,
+#                 self.n_mel_channels,
+#                 self.sampling_rate,
+#                 self.hop_length,
+#                 self.win_length,
+#                 self.hparams.mel_fmin,
+#                 self.hparams.mel_fmax,
+#                 center=False,
+#             )
+#         else:
+#             spec = spectrogram_torch(
+#                 audio_norm,
+#                 self.filter_length,
+#                 self.sampling_rate,
+#                 self.hop_length,
+#                 self.win_length,
+#                 center=False,
+#             )
+#         spec = torch.squeeze(spec, 0)
+#         return spec, audio_norm
+#     #Because in kaggle bert is saved local  
+#     # def get_text(self, text, word2ph, phone, tone, language_str, wav_path):
+#     #     phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
+#     #     if self.add_blank:
+#     #         phone = commons.intersperse(phone, 0)
+#     #         tone = commons.intersperse(tone, 0)
+#     #         language = commons.intersperse(language, 0)
+#     #         for i in range(len(word2ph)):
+#     #             word2ph[i] = word2ph[i] * 2
+#     #         word2ph[0] += 1
+#     #     bert_path = wav_path.replace(".wav", ".bert.pt")
+#     #     try:
+#     #         bert = torch.load(bert_path)
+#     #         assert bert.shape[-1] == len(phone)
+#     #     except Exception as e:
+#     #         print(e, wav_path, bert_path, bert.shape, len(phone))
+#     #         bert = get_bert(text, word2ph, language_str)
+#     #         torch.save(bert, bert_path)
+#     #         assert bert.shape[-1] == len(phone), phone
+
+#     #     if self.disable_bert:
+#     #         bert = torch.zeros(1024, len(phone))
+#     #         ja_bert = torch.zeros(768, len(phone))
+#     #     else:
+#     #         if language_str in ["ZH"]:
+#     #             bert = bert
+#     #             ja_bert = torch.zeros(768, len(phone))
+#     #         elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", 'SP', 'ES', 'FR', 'DE', 'RU', 'MS']:
+#     #             ja_bert = bert
+#     #             bert = torch.zeros(1024, len(phone))
+#     #         else:
+#     #             raise
+#     #             bert = torch.zeros(1024, len(phone))
+#     #             ja_bert = torch.zeros(768, len(phone))
+#     #     assert bert.shape[-1] == len(phone)
+#     #     phone = torch.LongTensor(phone)
+#     #     tone = torch.LongTensor(tone)
+#     #     language = torch.LongTensor(language)
+#     #     return bert, ja_bert, phone, tone, language
+#     def get_text(self, text, phones, tones, word2ph, language_str, wav_path, sid):
+#         """
+#         Processes the phoneme, tone, and language strings from the metadata file,
+#         loads the corresponding BERT features, and converts them to tensors.
+    
+#         This is the final corrected version with a signature that matches its caller.
+#         """
+#         # NOTE THE CHANGE IN ARGUMENTS:
+#         # 'text' is the normalized text (unused here)
+#         # 'phones' is the string of space-separated phonemes
+#         # 'tones' is the string of space-separated tones
+        
+#         # Use the 'phones' and 'tones' arguments that are passed in
+#         # phone = phones.split(" ")
+#         phone = phones
+#         tone = [int(i) for i in tones] # The tones still need to be converted from str to int
+#         language = self.language_id_map[language_str]
+#         phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
+#         bert = None
+#         ja_bert = None
+#         # tone = [int(i) for i in tones.split(" ")]
+#         # language = self.language_id_map[language_str]
+#         # phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str)
+#         # bert = None
+#         # ja_bert = None
+    
+#         if self.use_bert:
+#             INPUT_DATA_PREFIX = '/kaggle/input/'
+#             OUTPUT_BERT_PREFIX = '/kaggle/working/bert_features/'
+    
+#             relative_path = os.path.relpath(wav_path, INPUT_DATA_PREFIX)
+#             bert_path = os.path.join(OUTPUT_BERT_PREFIX, relative_path.replace(".wav", ".bert.pt"))
+            
+#             try:
+#                 bert = torch.load(bert_path)
+#             except FileNotFoundError:
+#                 print(f"\n--- FATAL ERROR: BERT file not found! ---")
+#                 print(f"Original WAV path: {wav_path}")
+#                 print(f"Attempted BERT path: {bert_path}")
+#                 print(f"Please ensure your preprocessing script ran successfully.")
+#                 raise
+#             except Exception as e:
+#                 print(f"\n--- FATAL ERROR: Could not load BERT file: {bert_path} ---")
+#                 print(f"An unexpected error occurred: {e}")
+#                 raise
+    
+#         if self.use_ja_bert:
+#             ja_bert_path = wav_path.replace(".wav", ".ja_bert.pt")
+#             try:
+#                 ja_bert = torch.load(ja_bert_path)
+#                 if ja_bert is not None:
+#                     ja_bert = ja_bert.half()
+#             except:
+#                 ja_bert = None
+    
+#         # The function now returns the correct variables
+#         return bert, ja_bert, phone, tone, language
+ 
+#     def get_sid(self, sid):
+#         sid = torch.LongTensor([int(sid)])
+#         return sid
+
+#     def __getitem__(self, index):
+#         return self.get_audio_text_speaker_pair(self.audiopaths_sid_text[index])
+
+#     def __len__(self):
+#         return len(self.audiopaths_sid_text)
 
 
 class TextAudioSpeakerCollate:
