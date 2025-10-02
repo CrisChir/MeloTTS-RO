@@ -22,13 +22,30 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
     """
 
     def __init__(self, audiopaths_sid_text, hparams):
+
+
+
+        self.audiopaths_sid_text = self.load_filepaths_and_text(audiopaths_sid_text)
+        self.max_wav_value = hparams.data.max_wav_value
+        self.sampling_rate = hparams.data.sampling_rate
+        self.filter_length = hparams.data.filter_length
+        self.hop_length = hparams.data.hop_length
+        self.win_length = hparams.data.win_length
+        self.cleaned_text = hparams.data.cleaned_text
+        self.add_blank = hparams.data.add_blank
+        self.min_text_len = getattr(hparams.data, "min_text_len", 1)
+        self.max_text_len = getattr(hparams.data, "max_text_len", 1000)
+        self.spk2id = hparams.data.spk2id
+
+
+        
         self.audiopaths_sid_text = load_filepaths_and_text(audiopaths_sid_text)
-        self.max_wav_value = hparams.max_wav_value
-        self.sampling_rate = hparams.sampling_rate
-        self.filter_length = hparams.filter_length
-        self.hop_length = hparams.hop_length
-        self.win_length = hparams.win_length
-        self.sampling_rate = hparams.sampling_rate
+        # self.max_wav_value = hparams.max_wav_value
+        # self.sampling_rate = hparams.sampling_rate
+        # self.filter_length = hparams.filter_length
+        # self.hop_length = hparams.hop_length
+        # self.win_length = hparams.win_length
+        # self.sampling_rate = hparams.sampling_rate
         self.spk_map = hparams.spk2id
         self.hparams = hparams
         self.disable_bert = getattr(hparams, "disable_bert", False)
@@ -38,6 +55,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         self.language_id_map = language_id_map
         self.use_bert = getattr(hparams.model, "use_bert", False)
         self.use_ja_bert = getattr(hparams.model, "use_ja_bert", False)
+        self._filter()
+        self.spec_loader = Spectrogram()
         # --- END OF FIX ---
         self.use_mel_spec_posterior = getattr(
             hparams, "use_mel_posterior_encoder", False
