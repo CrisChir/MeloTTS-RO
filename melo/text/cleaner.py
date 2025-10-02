@@ -52,19 +52,19 @@ def clean_text_bert(text, language, device):
 
     # This is the new, correctly structured block for Romanian
     elif language == "RO":
-    # 1. Normalize the text
-    norm_text = romanian.text_normalize(text)
-    
-    # 2. Get the RAW, UNPADDED phonemes, tones, and word2ph
-    phones, tones, word2ph = romanian.g2p(norm_text)
-    
-    # 3. Calculate BERT features using the UNPADDED word2ph
-    bert = romanian.get_bert_feature(norm_text, word2ph, device)
-    
-    # 4. AFTER calculating BERT, apply the final padding for the data file
-    phones = ["_"] + phones + ["_"]
-    tones = [0] + tones + [0]
-    word2ph = [1] + word2ph + [1]
+        # 1. Normalize the text
+        norm_text = romanian.text_normalize(text)
+        
+        # 2. Get the RAW, UNPADDED phonemes, tones, and word2ph
+        phones, tones, word2ph = romanian.g2p(norm_text)
+        
+        # 3. Calculate BERT features using the UNPADDED word2ph
+        bert = romanian.get_bert_feature(norm_text, word2ph, device)
+        
+        # 4. AFTER calculating BERT, apply the final padding for the data file
+        phones = ["_"] + phones + ["_"]
+        tones = [0] + tones + [0]
+        word2ph = [1] + word2ph + [1]
     else:
         raise ValueError(f"Unsupported language: {language}")
 
