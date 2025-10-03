@@ -380,7 +380,7 @@ ro_symbols = [
 num_ro_tones = 1
 
 # combine all symbols
-normal_symbols = sorted(set(zh_symbols + ja_symbols + en_symbols + kr_symbols + es_symbols + fr_symbols + de_symbols + ru_symbols+))
+normal_symbols = sorted(set(zh_symbols + ja_symbols + en_symbols + kr_symbols + es_symbols + fr_symbols + de_symbols + ru_symbols))
 #symbols = [pad] + normal_symbols + pu_symbols + ms_symbols  #malay version
 symbols = [pad] + normal_symbols + pu_symbols + ro_symbols + ms_symbols
 sil_phonemes_ids = [symbols.index(i) for i in pu_symbols]
