@@ -91,32 +91,11 @@ def main(
                             " ".join([str(i) for i in word2ph]),
                         )
                     )
-                    ##########
-                    #preprocess_text.py script is trying to save the generated BERT feature file (.bert.pt) right next to the original audio file (.wav). 
-                    # Since the audio file is in /kaggle/input/..., 
-                    # the script is attempting to write to a read-only location, 
-                    # which the operating system forbids, resulting in the RuntimeError.
-                    # 
-                    # #########
-                    # bert_path = utt.replace(".wav", ".bert.pt")
-                    # os.makedirs(os.path.dirname(bert_path), exist_ok=True)
-                    # torch.save(bert.cpu(), bert_path)
-                    # #########
-                    # Defines the base writable directory
-                    output_base_dir = '/kaggle/working/bert_features/'
-                    # Get the original relative path from the input directory
-                    # For example: 'wavs/datasets-1_000000.wav'
-                    relative_path = os.path.relpath(utt, '/kaggle/input/')
-                    # Create the new full path for the .bert.pt file inside /kaggle/working/
-                    # For example: '/kaggle/working/bert_features/melotts-dataset-romanian/consolidated_melotts_data/wavs/datasets-1_000000.bert.pt'
-                    bert_path = os.path.join(output_base_dir, relative_path.replace(".wav", ".bert.pt"))
-                    # Create the necessary subdirectories inside /kaggle/working/
+                    bert_path = utt.replace(".wav", ".bert.pt")
                     os.makedirs(os.path.dirname(bert_path), exist_ok=True)
-                    # Save the bert tensor to the new, writable location
                     torch.save(bert.cpu(), bert_path)
                 except Exception as error:
-                    # print("err!", line, error)
-                    print(f"err! on line: {line.strip()}", repr(error))
+                    print("err!", line, error)
 
             out_file.close()
 
