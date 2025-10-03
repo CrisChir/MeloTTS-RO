@@ -27,4 +27,4 @@ langid==1.1.6
 tqdm
 tensorboard==2.16.2
 loguru==0.7.2
-phonemizer # <-- ADDED for ro, de, es, fr
+epitran # phonemizer # <-- ADDED for ro, de, es, fr #replaced due to the backend ///tbd LatPhon: Lightweight Multilingual G2P for Romance Languages and English
