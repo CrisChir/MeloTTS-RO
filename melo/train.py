@@ -66,8 +66,7 @@ def run():
         utils.check_git_hash(hps.model_dir)
         writer = SummaryWriter(log_dir=hps.model_dir)
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
-    # train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
-    train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps) # <-- Change hps.data to hps
+    train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
     train_sampler = DistributedBucketSampler(
         train_dataset,
         hps.train.batch_size,
@@ -79,7 +78,7 @@ def run():
     collate_fn = TextAudioSpeakerCollate()
     train_loader = DataLoader(
         train_dataset,
-        # num_workers=10,
+        num_workers=10,
         shuffle=False,
         pin_memory=True,
         collate_fn=collate_fn,
@@ -88,8 +87,7 @@ def run():
         prefetch_factor=4,
     )  # DataLoader config could be adjusted.
     if rank == 0:
-        # eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
-        eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data) # <-- Change hps.data to hps
+        eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
         eval_loader = DataLoader(
             eval_dataset,
             num_workers=0,
