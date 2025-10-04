@@ -53,6 +53,7 @@ def main(
     clean: bool,
     num_device: int,
 ):
+    # This block is correctly indented under main()
     if train_path is None:
         train_path = os.path.join(os.path.dirname(metadata), 'train.list')
     if val_path is None:
@@ -60,11 +61,13 @@ def main(
     out_config_path = os.path.join(os.path.dirname(metadata), 'config.json')
 
     if cleaned_path is None:
-    cleaned_path = metadata + ".cleaned"
+        cleaned_path = metadata + ".cleaned"
 
+    # --- Start of Indentation Correction ---
+    # This 'if' statement is correctly indented under main()
     if clean:
-         def loop(lines):
-             
+        # All code below this line is now indented one level deeper
+        def loop(lines):
             lines, index = lines
             print(len(lines), index)
             os.environ['CUDA_VISIBLE_DEVICES'] = str(index)
@@ -72,16 +75,12 @@ def main(
             out_file = open(f'{cleaned_path}-part-{index}', 'w', encoding='utf-8')
             for line in tqdm(lines):
                 try:
-                    # 1. Unpack the original line
                     utt, spk, language, text = line.strip().split("|", 3)
-                    
-                    # 2. Call the cleaner to get features (This now uses Epitran correctly)
                     norm_text, phones, tones, word2ph, bert = clean_text_bert(text, language, device='cuda')
     
                     assert len(phones) == len(tones)
                     assert len(phones) == sum(word2ph)
                     
-                    # 3. Write the cleaned metadata line
                     out_file.write(
                         "{}|{}|{}|{}|{}|{}|{}\n".format(
                             utt,
@@ -94,28 +93,20 @@ def main(
                         )
                     )
     
-                    # 4. --- THIS IS THE CRITICAL FIX ---
-                    # Correctly calculate the output path for the .bert.pt file
                     INPUT_DATA_PREFIX = '/kaggle/input/'
                     OUTPUT_BERT_PREFIX = '/kaggle/working/bert_features/'
                     
-                    # Get the relative path (e.g., 'melotts-dataset-romanian/.../audio.wav')
                     relative_path = os.path.relpath(utt, INPUT_DATA_PREFIX)
-                    
-                    # Construct the new, writable path in /kaggle/working/
                     bert_path = os.path.join(OUTPUT_BERT_PREFIX, relative_path.replace(".wav", ".bert.pt"))
-                    
-                    # Create the necessary subdirectories in the writable location
                     os.makedirs(os.path.dirname(bert_path), exist_ok=True)
                     
-                    # 5. Save the BERT tensor to the correct, writable path
                     torch.save(bert.cpu(), bert_path)
                     
                 except Exception as error:
                     print(f"err! {line.strip()}", repr(error))
     
-         out_file.close()
-    
+            out_file.close()
+
         lines = []
         for line in tqdm(open(metadata, encoding="utf-8").readlines()):
             lines.append(line)
@@ -125,7 +116,7 @@ def main(
         pooled = pool.map(loop, df_split)
         pool.close()
         pool.join()
-    
+
         out_file = open(cleaned_path, 'w', encoding='utf-8')
         for f in glob(f'{cleaned_path}-part*'):
             with open(f) as fopen:
@@ -133,52 +124,53 @@ def main(
                     out_file.write(line)
                     
         out_file.close()
-    
+    # --- End of Indentation Correction ---
+
         metadata = cleaned_path
-    
+
     spk_utt_map = defaultdict(list)
     spk_id_map = {}
     current_sid = 0
-    
+
     with open(metadata, encoding="utf-8") as f:
         for line in f.readlines():
             utt, spk, language, text, phones, tones, word2ph = line.strip().split("|")
             spk_utt_map[spk].append(line)
-    
+
             if spk not in spk_id_map.keys():
                 spk_id_map[spk] = current_sid
                 current_sid += 1
-    
+
     train_list = []
     val_list = []
-    
+
     for spk, utts in spk_utt_map.items():
         shuffle(utts)
         val_list += utts[:val_per_spk]
         train_list += utts[val_per_spk:]
-    
+
     if len(val_list) > max_val_total:
         train_list += val_list[max_val_total:]
         val_list = val_list[:max_val_total]
-    
+
     with open(train_path, "w", encoding="utf-8") as f:
         for line in train_list:
             f.write(line)
-    
+
     with open(val_path, "w", encoding="utf-8") as f:
         for line in val_list:
             f.write(line)
-    
+
     config = json.load(open(config_path, encoding="utf-8"))
     config["data"]["spk2id"] = spk_id_map
-    
+
     config["data"]["training_files"] = train_path
     config["data"]["validation_files"] = val_path
     config["data"]["n_speakers"] = len(spk_id_map)
     config["num_languages"] = num_languages
     config["num_tones"] = num_tones
     config["symbols"] = symbols
-    
+
     with open(out_config_path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
