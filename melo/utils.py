@@ -11,21 +11,67 @@ import torchaudio
 import librosa
 from melo import commons
 
-# Re-defining HParams here because it's used by functions in this file
+# This HParams class is required by get_hparams
 class HParams:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             if type(v) == dict:
                 v = HParams(**v)
             self[k] = v
+    def keys(self): return self.__dict__.keys()
+    def items(self): return self.__dict__.items()
+    def values(self): return self.__dict__.values()
+    def __len__(self): return len(self.__dict__)
     def __getitem__(self, key): return getattr(self, key)
     def __setitem__(self, key, value): return setattr(self, key, value)
+    def __contains__(self, key): return key in self.__dict__
     def __repr__(self): return self.__dict__.__repr__()
-
 
 MATPLOTLIB_FLAG = False
 logger = logging.getLogger(__name__)
 
+# THIS IS THE CRITICAL MISSING FUNCTION
+def get_hparams(init=True):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c", "--config", type=str, default="./configs/config.json", help="JSON file for configuration"
+    )
+    parser.add_argument("-m", "--model", type=str, required=True, help="Model name")
+    
+    # Add arguments that might be missing from older versions
+    parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--world_size', type=int, default=1)
+    parser.add_argument('--port', type=int, default=10000)
+    parser.add_argument('--pretrain_G', type=str, default=None)
+    parser.add_argument('--pretrain_D', type=str, default=None)
+    parser.add_argument('--pretrain_dur', type=str, default=None)
+
+    args, unknown = parser.parse_known_args() # Use parse_known_args to ignore torchrun args
+    model_dir = os.path.join("./logs", args.model)
+
+    os.makedirs(model_dir, exist_ok=True)
+
+    config_path = args.config
+    config_save_path = os.path.join(model_dir, "config.json")
+    if init:
+        with open(config_path, "r", encoding='utf-8') as f:
+            data = f.read()
+        with open(config_save_path, "w", encoding='utf-8') as f:
+            f.write(data)
+    else:
+        with open(config_save_path, "r", encoding='utf-8') as f:
+            data = f.read()
+    config = json.loads(data)
+
+    hparams = HParams(**config)
+    hparams.model_dir = model_dir
+    hparams.pretrain_G = args.pretrain_G
+    hparams.pretrain_D = args.pretrain_D
+    hparams.pretrain_dur = args.pretrain_dur
+    hparams.port = args.port
+    return hparams
+
+# Including all other necessary functions
 def load_wav_to_torch(full_path, sr=None):
     sampling_rate, data = read(full_path)
     if sr is not None and sampling_rate != sr:
@@ -33,6 +79,14 @@ def load_wav_to_torch(full_path, sr=None):
         data = resampler(torch.FloatTensor(data.astype(np.float32))).numpy().astype(np.int16)
         sampling_rate = sr
     return torch.FloatTensor(data.astype(np.float32)), sampling_rate
+
+def load_wav_to_torch_librosa(full_path, sr):
+    if os.path.exists('/workspace'):
+        splitted = os.path.split(full_path)
+        new_folder = os.path.join('/workspace', os.path.split(splitted[0])[1])
+        full_path = os.path.join(new_folder, splitted[1])
+    audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
+    return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
 
 def load_filepaths_and_text(filename, split="|"):
     with open(filename, encoding="utf-8") as f:
@@ -46,40 +100,6 @@ def get_hparams_from_file(config_path):
     hparams = HParams(**config)
     return hparams
 
-# Including the rest of the original functions to preserve file integrity
-def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
-    from melo.text import cleaned_text_to_sequence, get_bert
-    from melo.text.cleaner import clean_text
-    norm_text, phone, tone, word2ph = clean_text(text, language_str)
-    phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str, symbol_to_id)
-    if hps.data.add_blank:
-        phone = commons.intersperse(phone, 0)
-        tone = commons.intersperse(tone, 0)
-        language = commons.intersperse(language, 0)
-        for i in range(len(word2ph)): word2ph[i] = word2ph[i] * 2
-        word2ph[0] += 1
-    if getattr(hps.data, "disable_bert", False):
-        bert = torch.zeros(1024, len(phone))
-        ja_bert = torch.zeros(768, len(phone))
-    else:
-        bert = get_bert(norm_text, word2ph, language_str, device)
-        del word2ph
-        assert bert.shape[-1] == len(phone), phone
-        if language_str == "ZH":
-            bert = bert
-            ja_bert = torch.zeros(768, len(phone))
-        elif language_str in ["JP", "EN", "ZH_MIX_EN", 'KR', 'SP', 'ES', 'FR', 'DE', 'RU', 'MS', 'RO']: # Added RO
-            ja_bert = bert
-            bert = torch.zeros(1024, len(phone))
-        else:
-            raise NotImplementedError()
-    assert bert.shape[-1] == len(phone), f"Bert seq len {bert.shape[-1]} != {len(phone)}"
-    phone = torch.LongTensor(phone)
-    tone = torch.LongTensor(tone)
-    language = torch.LongTensor(language)
-    return bert, ja_bert, phone, tone, language
-
-# ... (pasting the rest of the functions from your provided code)
 def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False):
     assert os.path.isfile(checkpoint_path)
     checkpoint_dict = torch.load(checkpoint_path, map_location="cpu")
@@ -105,34 +125,34 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
         model.load_state_dict(new_state_dict, strict=False)
     logger.info(f"Loaded checkpoint '{checkpoint_path}' (iteration {iteration})")
     return model, optimizer, learning_rate, iteration
-# THIS IS THE MISSING FUNCTION THAT CAUSED THE CRASH
-def load_wav_to_torch_librosa(full_path, sr):
-    if os.path.exists('/workspace'):
-        splitted = os.path.split(full_path)
-        new_folder = os.path.join('/workspace', os.path.split(splitted[0])[1])
-        full_path = os.path.join(new_folder, splitted[1])
-    audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
-    return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
-# THIS IS THE MISSING FUNCTION THAT CAUSED THE CRASH
-def load_wav_to_torch_librosa(full_path, sr):
-    if os.path.exists('/workspace'):
-        splitted = os.path.split(full_path)
-        new_folder = os.path.join('/workspace', os.path.split(splitted[0])[1])
-        full_path = os.path.join(new_folder, splitted[1])
-    audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
-    return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
 
-def load_filepaths_and_text(filename, split="|"):
-    with open(filename, encoding="utf-8") as f:
-        filepaths_and_text = [line.strip().split(split) for line in f]
-    return filepaths_and_text
+def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path):
+    logger.info(f"Saving model and optimizer state at iteration {iteration} to {checkpoint_path}")
+    if hasattr(model, "module"):
+        state_dict = model.module.state_dict()
+    else:
+        state_dict = model.state_dict()
+    torch.save({
+        "model": state_dict, "iteration": iteration,
+        "optimizer": optimizer.state_dict(), "learning_rate": learning_rate,
+    }, checkpoint_path)
 
-def get_hparams_from_file(config_path):
-    with open(config_path, "r", encoding="utf-8") as f:
-        data = f.read()
-    config = json.loads(data)
-    hparams = HParams(**config)
-    return hparams
+def get_logger(model_dir, filename="train.log"):
+    global logger
+    logger = logging.getLogger(os.path.basename(model_dir))
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s")
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir, exist_ok=True)
+    h = logging.FileHandler(os.path.join(model_dir, filename))
+    h.setLevel(logging.DEBUG)
+    h.setFormatter(formatter)
+    logger.addHandler(h)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    return logger
 # import os
 # import glob
 # import argparse
