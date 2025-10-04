@@ -63,7 +63,8 @@ def main(
         cleaned_path = metadata + ".cleaned"
 
     if clean:
-        def loop(lines):
+         def loop(lines):
+             
             lines, index = lines
             print(len(lines), index)
             os.environ['CUDA_VISIBLE_DEVICES'] = str(index)
@@ -114,6 +115,7 @@ def main(
                     print(f"err! {line.strip()}", repr(error))
     
             out_file.close()
+
         lines = []
         for line in tqdm(open(metadata, encoding="utf-8").readlines()):
             lines.append(line)
