@@ -60,7 +60,7 @@ def main(
     out_config_path = os.path.join(os.path.dirname(metadata), 'config.json')
 
     if cleaned_path is None:
-        cleaned_path = metadata + ".cleaned"
+    cleaned_path = metadata + ".cleaned"
 
     if clean:
          def loop(lines):
@@ -115,7 +115,7 @@ def main(
                     print(f"err! {line.strip()}", repr(error))
     
          out_file.close()
-
+    
         lines = []
         for line in tqdm(open(metadata, encoding="utf-8").readlines()):
             lines.append(line)
@@ -125,7 +125,7 @@ def main(
         pooled = pool.map(loop, df_split)
         pool.close()
         pool.join()
-
+    
         out_file = open(cleaned_path, 'w', encoding='utf-8')
         for f in glob(f'{cleaned_path}-part*'):
             with open(f) as fopen:
@@ -133,52 +133,52 @@ def main(
                     out_file.write(line)
                     
         out_file.close()
-
+    
         metadata = cleaned_path
-
+    
     spk_utt_map = defaultdict(list)
     spk_id_map = {}
     current_sid = 0
-
+    
     with open(metadata, encoding="utf-8") as f:
         for line in f.readlines():
             utt, spk, language, text, phones, tones, word2ph = line.strip().split("|")
             spk_utt_map[spk].append(line)
-
+    
             if spk not in spk_id_map.keys():
                 spk_id_map[spk] = current_sid
                 current_sid += 1
-
+    
     train_list = []
     val_list = []
-
+    
     for spk, utts in spk_utt_map.items():
         shuffle(utts)
         val_list += utts[:val_per_spk]
         train_list += utts[val_per_spk:]
-
+    
     if len(val_list) > max_val_total:
         train_list += val_list[max_val_total:]
         val_list = val_list[:max_val_total]
-
+    
     with open(train_path, "w", encoding="utf-8") as f:
         for line in train_list:
             f.write(line)
-
+    
     with open(val_path, "w", encoding="utf-8") as f:
         for line in val_list:
             f.write(line)
-
+    
     config = json.load(open(config_path, encoding="utf-8"))
     config["data"]["spk2id"] = spk_id_map
-
+    
     config["data"]["training_files"] = train_path
     config["data"]["validation_files"] = val_path
     config["data"]["n_speakers"] = len(spk_id_map)
     config["num_languages"] = num_languages
     config["num_tones"] = num_tones
     config["symbols"] = symbols
-
+    
     with open(out_config_path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
