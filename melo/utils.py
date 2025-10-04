@@ -113,7 +113,26 @@ def load_wav_to_torch_librosa(full_path, sr):
         full_path = os.path.join(new_folder, splitted[1])
     audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
     return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
+# THIS IS THE MISSING FUNCTION THAT CAUSED THE CRASH
+def load_wav_to_torch_librosa(full_path, sr):
+    if os.path.exists('/workspace'):
+        splitted = os.path.split(full_path)
+        new_folder = os.path.join('/workspace', os.path.split(splitted[0])[1])
+        full_path = os.path.join(new_folder, splitted[1])
+    audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
+    return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
 
+def load_filepaths_and_text(filename, split="|"):
+    with open(filename, encoding="utf-8") as f:
+        filepaths_and_text = [line.strip().split(split) for line in f]
+    return filepaths_and_text
+
+def get_hparams_from_file(config_path):
+    with open(config_path, "r", encoding="utf-8") as f:
+        data = f.read()
+    config = json.loads(data)
+    hparams = HParams(**config)
+    return hparams
 # import os
 # import glob
 # import argparse
