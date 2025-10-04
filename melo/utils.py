@@ -105,6 +105,14 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
         model.load_state_dict(new_state_dict, strict=False)
     logger.info(f"Loaded checkpoint '{checkpoint_path}' (iteration {iteration})")
     return model, optimizer, learning_rate, iteration
+# THIS IS THE MISSING FUNCTION THAT CAUSED THE CRASH
+def load_wav_to_torch_librosa(full_path, sr):
+    if os.path.exists('/workspace'):
+        splitted = os.path.split(full_path)
+        new_folder = os.path.join('/workspace', os.path.split(splitted[0])[1])
+        full_path = os.path.join(new_folder, splitted[1])
+    audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
+    return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
 
 # import os
 # import glob
