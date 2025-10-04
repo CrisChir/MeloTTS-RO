@@ -375,6 +375,30 @@ ro_symbols = [
     'ḱ',
     '”',
     '„',
+    'ea',
+    'tsʲʲ',
+    'nʲʲ',
+    'ˈoʊ',
+    'ˈyɪ',
+    'e̯a',
+    'o̯a',
+    'ˈea',
+    'iɪ',
+    'ˈɨ',
+    'ˌɨ',
+    'eɪ',
+    'ˈɔa',
+    '[ˈu',
+    'ˈuɪ',
+    'zʲˌʲ',
+    'iʊ',
+    'tʲʲ',
+    'tʃʲ',
+    'ˌuɪ',
+    'rʲ',
+    'ɾʲ',
+    'uɪ',
+    'ˈeʊ',
 ]
 
 num_ro_tones = 1
@@ -405,7 +429,26 @@ language_tone_start_map = {
     "RO": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones,
     "MS": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones,
 }
+# --- THIS WAS MISSING ---
+# Create the maps
+symbol_to_id = {s: i for i, s in enumerate(symbols)}
+id_to_symbol = {i: s for i, s in enumerate(symbols)}
+# --- END OF MISSING CODE ---
 
+# Language and Tone Maps
+num_languages = 1 # Set to 1 for Romanian-only training
+num_tones = 1 # Romanian is non-tonal
+
+language_id_map = {
+    'RO': 0,
+    'ro': 0
+}
+
+# Simple tone map for 1 language
+language_tone_start_map = {
+    'RO': 0,
+    'ro': 0
+}
 if __name__ == "__main__":
     a = set(zh_symbols)
     b = set(en_symbols)
