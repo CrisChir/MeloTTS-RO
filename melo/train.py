@@ -51,44 +51,59 @@ torch.backends.cuda.enable_flash_sdp(True)
 torch.backends.cuda.enable_math_sdp(True)
 global_step = 0
 
-
 def run():
- # This is the entry point
-    hps = utils.get_hparams() # This will now work
+    hps = utils.get_hparams()
     
-    # Set up logger
     logger = utils.get_logger(hps.model_dir)
     logger.info(hps)
-    utils.check_git_hash(hps.model_dir) # This will now work
+    utils.check_git_hash(hps.model_dir)
     
     torch.manual_seed(hps.train.seed)
-    
-    # Setup distributed training
+
+    # --- CORRECT DISTRIBUTED SETUP ---
+    n_gpus = torch.cuda.device_count()
+    rank = int(os.environ.get("LOCAL_RANK", 0))
     dist.init_process_group(backend='nccl', init_method='env://')
-    local_rank = int(os.environ.get("LOCAL_RANK"))
-    torch.cuda.set_device(local_rank)
+    torch.cuda.set_device(rank)
+    # --- END ---
+
+    if rank == 0:
+        logger.info("Init dataset...")
+        # create logger
+        writer = SummaryWriter(log_dir=hps.model_dir)
+        writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
+
+    # Your data loader call is correct for your repository
+    train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
     
-    # --- THIS IS THE CRITICAL FIX ---
-    # We pass the full 'hps' object, not 'hps.data'
-    train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps)
-    eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps)
-    # --- END OF FIX ---
-    
+    # The rest of the function...
+    # (The following is from the original repository and should match your file)
+    train_sampler = DistributedBucketSampler(
+        train_dataset,
+        hps.train.batch_size,
+        [100,200,300,400,500,600,700,800,900],
+        num_replicas=n_gpus,
+        rank=rank,
+        shuffle=True)
     collate_fn = TextAudioSpeakerCollate()
-    train_sampler = DistributedBucketSampler(train_dataset, hps.train.batch_size, [100,200,300,400,500,600,700,800,900], num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True)
-    train_loader = DataLoader(train_dataset, num_workers=4, shuffle=False, pin_memory=True, collate_fn=collate_fn, batch_sampler=train_sampler)
-    eval_loader = DataLoader(eval_dataset, num_workers=2, shuffle=False, batch_size=1, pin_memory=True, drop_last=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, num_workers=4, shuffle=False, pin_memory=True,
+                              collate_fn=collate_fn, batch_sampler=train_sampler)
     if rank == 0:
         eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
-        eval_loader = DataLoader(
-            eval_dataset,
-            num_workers=0,
-            shuffle=False,
-            batch_size=1,
-            pin_memory=True,
-            drop_last=False,
-            collate_fn=collate_fn,
-        )
+        eval_loader = DataLoader(eval_dataset, num_workers=2, shuffle=False,
+                                 batch_size=1, pin_memory=True,
+                                 drop_last=False, collate_fn=collate_fn)
+    # if rank == 0:
+    #     eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
+    #     eval_loader = DataLoader(
+    #         eval_dataset,
+    #         num_workers=0,
+    #         shuffle=False,
+    #         batch_size=1,
+    #         pin_memory=True,
+    #         drop_last=False,
+    #         collate_fn=collate_fn,
+    #     )
     if (
         "use_noise_scaled_mas" in hps.model.keys()
         and hps.model.use_noise_scaled_mas is True
