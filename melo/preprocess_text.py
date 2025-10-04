@@ -114,7 +114,7 @@ def main(
                 except Exception as error:
                     print(f"err! {line.strip()}", repr(error))
     
-            out_file.close()
+         out_file.close()
 
         lines = []
         for line in tqdm(open(metadata, encoding="utf-8").readlines()):
