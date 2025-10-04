@@ -63,42 +63,59 @@ def main(
         cleaned_path = metadata + ".cleaned"
 
     if clean:
-        def loop(lines):
-            lines, index = lines
-            print(len(lines), index)
-            os.environ['CUDA_VISIBLE_DEVICES'] = str(index)
+        
+        
+    def loop(lines):
+        lines, index = lines
+        print(len(lines), index)
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(index)
 
-            out_file = open(f'{cleaned_path}-part-{index}', 'w', encoding='utf-8')
-            for line in tqdm(lines):
-                try:
-                    utt, spk, language, text = line.strip().split("|")
-                    if os.path.exists('/workspace'):
-                        splitted = os.path.split(utt)
-                        new_folder = os.path.join('/workspace', os.path.split(splitted[0])[1])
-                        utt = os.path.join(new_folder, splitted[1])
-                    norm_text, phones, tones, word2ph, bert = clean_text_bert(text, language, device='cuda')
+        out_file = open(f'{cleaned_path}-part-{index}', 'w', encoding='utf-8')
+        for line in tqdm(lines):
+            try:
+                # 1. Unpack the original line
+                utt, spk, language, text = line.strip().split("|", 3)
+                
+                # 2. Call the cleaner to get features (This now uses Epitran correctly)
+                norm_text, phones, tones, word2ph, bert = clean_text_bert(text, language, device='cuda')
 
-                    assert len(phones) == len(tones)
-                    assert len(phones) == sum(word2ph)
-                    out_file.write(
-                        "{}|{}|{}|{}|{}|{}|{}\n".format(
-                            utt,
-                            spk,
-                            language,
-                            norm_text,
-                            " ".join(phones),
-                            " ".join([str(i) for i in tones]),
-                            " ".join([str(i) for i in word2ph]),
-                        )
+                assert len(phones) == len(tones)
+                assert len(phones) == sum(word2ph)
+                
+                # 3. Write the cleaned metadata line
+                out_file.write(
+                    "{}|{}|{}|{}|{}|{}|{}\n".format(
+                        utt,
+                        spk,
+                        language,
+                        norm_text,
+                        " ".join(phones),
+                        " ".join([str(i) for i in tones]),
+                        " ".join([str(i) for i in word2ph]),
                     )
-                    bert_path = utt.replace(".wav", ".bert.pt")
-                    os.makedirs(os.path.dirname(bert_path), exist_ok=True)
-                    torch.save(bert.cpu(), bert_path)
-                except Exception as error:
-                    print("err!", line, error)
+                )
 
-            out_file.close()
+                # 4. --- THIS IS THE CRITICAL FIX ---
+                # Correctly calculate the output path for the .bert.pt file
+                INPUT_DATA_PREFIX = '/kaggle/input/'
+                OUTPUT_BERT_PREFIX = '/kaggle/working/bert_features/'
+                
+                # Get the relative path (e.g., 'melotts-dataset-romanian/.../audio.wav')
+                relative_path = os.path.relpath(utt, INPUT_DATA_PREFIX)
+                
+                # Construct the new, writable path in /kaggle/working/
+                bert_path = os.path.join(OUTPUT_BERT_PREFIX, relative_path.replace(".wav", ".bert.pt"))
+                
+                # Create the necessary subdirectories in the writable location
+                os.makedirs(os.path.dirname(bert_path), exist_ok=True)
+                
+                # 5. Save the BERT tensor to the correct, writable path
+                torch.save(bert.cpu(), bert_path)
+                
+            except Exception as error:
+                print(f"err! {line.strip()}", repr(error))
 
+        out_file.close()
         lines = []
         for line in tqdm(open(metadata, encoding="utf-8").readlines()):
             lines.append(line)
