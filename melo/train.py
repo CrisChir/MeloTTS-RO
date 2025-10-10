@@ -47,7 +47,7 @@ global_step = 0
 
 
 def run():
-    hps = utils.get_hparams()
+    hps = melo.utils.get_hparams()
     local_rank = int(os.environ["LOCAL_RANK"])
     dist.init_process_group(
         backend="gloo",
@@ -61,9 +61,9 @@ def run():
     torch.cuda.set_device(rank)
     global global_step
     if rank == 0:
-        logger = utils.get_logger(hps.model_dir)
+        logger =  melo.utils.get_logger(hps.model_dir)
         logger.info(hps)
-        utils.check_git_hash(hps.model_dir)
+        melo.utils.check_git_hash(hps.model_dir)
         writer = SummaryWriter(log_dir=hps.model_dir)
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
     train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
@@ -172,14 +172,14 @@ def run():
     hps.pretrain_dur = hps.pretrain_dur or pretrain_dur
 
     if hps.pretrain_G:
-        utils.load_checkpoint(
+        melo.utils.load_checkpoint(
                 hps.pretrain_G,
                 net_g,
                 None,
                 skip_optimizer=True
             )
     if hps.pretrain_D:
-        utils.load_checkpoint(
+        melo.utils.load_checkpoint(
                 hps.pretrain_D,
                 net_d,
                 None,
@@ -190,7 +190,7 @@ def run():
     if net_dur_disc is not None:
         net_dur_disc = DDP(net_dur_disc, device_ids=[rank], find_unused_parameters=True)
         if hps.pretrain_dur:
-            utils.load_checkpoint(
+            melo.utils.load_checkpoint(
                     hps.pretrain_dur,
                     net_dur_disc,
                     None,
@@ -199,24 +199,24 @@ def run():
                 
     try:
         if net_dur_disc is not None:
-            _, _, dur_resume_lr, epoch_str = utils.load_checkpoint(
-                utils.latest_checkpoint_path(hps.model_dir, "DUR_*.pth"),
+            _, _, dur_resume_lr, epoch_str = melo.utils.load_checkpoint(
+                melo.utils.latest_checkpoint_path(hps.model_dir, "DUR_*.pth"),
                 net_dur_disc,
                 optim_dur_disc,
                 skip_optimizer=hps.train.skip_optimizer
                 if "skip_optimizer" in hps.train
                 else True,
             )
-            _, optim_g, g_resume_lr, epoch_str = utils.load_checkpoint(
-                utils.latest_checkpoint_path(hps.model_dir, "G_*.pth"),
+            _, optim_g, g_resume_lr, epoch_str = melo.utils.load_checkpoint(
+                melo.utils.latest_checkpoint_path(hps.model_dir, "G_*.pth"),
                 net_g,
                 optim_g,
                 skip_optimizer=hps.train.skip_optimizer
                 if "skip_optimizer" in hps.train
                 else True,
             )
-            _, optim_d, d_resume_lr, epoch_str = utils.load_checkpoint(
-                utils.latest_checkpoint_path(hps.model_dir, "D_*.pth"),
+            _, optim_d, d_resume_lr, epoch_str = melo.utils.load_checkpoint(
+                melo.utils.latest_checkpoint_path(hps.model_dir, "D_*.pth"),
                 net_d,
                 optim_d,
                 skip_optimizer=hps.train.skip_optimizer
@@ -477,20 +477,20 @@ def train_and_evaluate(
                 )
 
                 image_dict = {
-                    "slice/mel_org": utils.plot_spectrogram_to_numpy(
+                    "slice/mel_org": melo.utils.plot_spectrogram_to_numpy(
                         y_mel[0].data.cpu().numpy()
                     ),
-                    "slice/mel_gen": utils.plot_spectrogram_to_numpy(
+                    "slice/mel_gen": melo.utils.plot_spectrogram_to_numpy(
                         y_hat_mel[0].data.cpu().numpy()
                     ),
-                    "all/mel": utils.plot_spectrogram_to_numpy(
+                    "all/mel": melo.utils.plot_spectrogram_to_numpy(
                         mel[0].data.cpu().numpy()
                     ),
-                    "all/attn": utils.plot_alignment_to_numpy(
+                    "all/attn": melo.utils.plot_alignment_to_numpy(
                         attn[0, 0].data.cpu().numpy()
                     ),
                 }
-                utils.summarize(
+                melo.utils.summarize(
                     writer=writer,
                     global_step=global_step,
                     images=image_dict,
@@ -499,14 +499,14 @@ def train_and_evaluate(
 
             if global_step % hps.train.eval_interval == 0:
                 evaluate(hps, net_g, eval_loader, writer_eval)
-                utils.save_checkpoint(
+                melo.utils.save_checkpoint(
                     net_g,
                     optim_g,
                     hps.train.learning_rate,
                     epoch,
                     os.path.join(hps.model_dir, "G_{}.pth".format(global_step)),
                 )
-                utils.save_checkpoint(
+                melo.utils.save_checkpoint(
                     net_d,
                     optim_d,
                     hps.train.learning_rate,
@@ -514,7 +514,7 @@ def train_and_evaluate(
                     os.path.join(hps.model_dir, "D_{}.pth".format(global_step)),
                 )
                 if net_dur_disc is not None:
-                    utils.save_checkpoint(
+                    melo.utils.save_checkpoint(
                         net_dur_disc,
                         optim_dur_disc,
                         hps.train.learning_rate,
@@ -523,7 +523,7 @@ def train_and_evaluate(
                     )
                 keep_ckpts = getattr(hps.train, "keep_ckpts", 5)
                 if keep_ckpts > 0:
-                    utils.clean_checkpoints(
+                    melo.utils.clean_checkpoints(
                         path_to_models=hps.model_dir,
                         n_ckpts_to_keep=keep_ckpts,
                         sort_by_time=True,
@@ -598,7 +598,7 @@ def evaluate(hps, generator, eval_loader, writer_eval):
                 )
                 image_dict.update(
                     {
-                        f"gen/mel_{batch_idx}": utils.plot_spectrogram_to_numpy(
+                        f"gen/mel_{batch_idx}": melo.utils.plot_spectrogram_to_numpy(
                             y_hat_mel[0].cpu().numpy()
                         )
                     }
@@ -612,14 +612,14 @@ def evaluate(hps, generator, eval_loader, writer_eval):
                 )
                 image_dict.update(
                     {
-                        f"gt/mel_{batch_idx}": utils.plot_spectrogram_to_numpy(
+                        f"gt/mel_{batch_idx}": melo.utils.plot_spectrogram_to_numpy(
                             mel[0].cpu().numpy()
                         )
                     }
                 )
                 audio_dict.update({f"gt/audio_{batch_idx}": y[0, :, : y_lengths[0]]})
 
-    utils.summarize(
+    melo.utils.summarize(
         writer=writer_eval,
         global_step=global_step,
         images=image_dict,
