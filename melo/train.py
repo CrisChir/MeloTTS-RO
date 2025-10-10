@@ -12,7 +12,7 @@ from tqdm import tqdm
 import logging
 
 logging.getLogger("numba").setLevel(logging.WARNING)
-import melo.commons
+import melo.commons as commons
 import melo.utils
 from melo.data_utils import (
     TextAudioSpeakerLoader,
