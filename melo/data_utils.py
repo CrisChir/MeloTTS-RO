@@ -4,7 +4,7 @@ import torch
 import torch.utils.data
 from tqdm import tqdm
 from loguru import logger
-import melo.commons
+import melo.commons as commons
 from melo.mel_processing import spectrogram_torch, mel_spectrogram_torch
 from melo.utils import load_filepaths_and_text
 from melo.utils import load_wav_to_torch_librosa as load_wav_to_torch
