@@ -1,9 +1,21 @@
-from . import chinese, japanese, english, chinese_mix, korean, french, spanish
+from . import chinese, japanese, english, chinese_mix, korean, french, spanish,romanian
 from . import cleaned_text_to_sequence
 import copy
 
-language_module_map = {"ZH": chinese, "JP": japanese, "EN": english, 'ZH_MIX_EN': chinese_mix, 'KR': korean,
-                    'FR': french, 'SP': spanish, 'ES': spanish}
+# 2. Add 'RO' and 'ro' to the dispatcher dictionary, pointing to our new module
+language_module_map = {
+    "ZH": chinese, 
+    "JP": japanese, 
+    "EN": english, 
+    'ZH_MIX_EN': chinese_mix, 
+    'KR': korean,
+    'FR': french, 
+    'SP': spanish, 
+    'ES': spanish, 
+    'MS': malay,
+    'RO': romanian,  # <-- ADDITION
+    'ro': romanian   # <-- ADDITION (for robustness)
+}
 
 
 def clean_text(text, language):
