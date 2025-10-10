@@ -1,4 +1,4 @@
-# flake8: noqa: E402
+o# flake8: noqa: E402
 
 import os
 import torch
@@ -14,19 +14,19 @@ import logging
 logging.getLogger("numba").setLevel(logging.WARNING)
 import melo.commons
 import melo.utils
-from data_utils import (
+from melo.data_utils import (
     TextAudioSpeakerLoader,
     TextAudioSpeakerCollate,
     DistributedBucketSampler,
 )
-from models import (
+from melo.models import (
     SynthesizerTrn,
     MultiPeriodDiscriminator,
     DurationDiscriminator,
 )
-from losses import generator_loss, discriminator_loss, feature_loss, kl_loss
-from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
-from text.symbols import symbols
+from melo.losses import generator_loss, discriminator_loss, feature_loss, kl_loss
+from melo.mel_processing import mel_spectrogram_torch, spec_to_mel_torch
+from melo.text.symbols import symbols
 from melo.download_utils import load_pretrain_model
 
 torch.backends.cuda.matmul.allow_tf32 = True
