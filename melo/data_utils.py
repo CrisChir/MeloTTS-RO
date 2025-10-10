@@ -156,7 +156,10 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             for i in range(len(word2ph)):
                 word2ph[i] = word2ph[i] * 2
             word2ph[0] += 1
-        bert_path = wav_path.replace(".wav", ".bert.pt")
+        # bert_path = wav_path.replace(".wav", ".bert.pt")
+        rel_path = os.path.relpath(wav_path, "/kaggle/input/")
+        bert_path = os.path.join("/kaggle/working/bert_features", rel_path).replace(".wav", ".bert.pt")
+
         try:
             bert = torch.load(bert_path)
             assert bert.shape[-1] == len(phone)
