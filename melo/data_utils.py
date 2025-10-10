@@ -160,12 +160,16 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         try:
             bert = torch.load(bert_path)
             assert bert.shape[-1] == len(phone)
+        # except Exception as e:
+        #     print(e, wav_path, bert_path, bert.shape, len(phone))
+        #     bert = get_bert(text, word2ph, language_str)
+        #     torch.save(bert, bert_path)
+        #     assert bert.shape[-1] == len(phone), phone
         except Exception as e:
-            print(e, wav_path, bert_path, bert.shape, len(phone))
+            print(f"Error loading BERT: {e} | {wav_path} | {bert_path} | len(phone): {len(phone)}")
             bert = get_bert(text, word2ph, language_str)
             torch.save(bert, bert_path)
             assert bert.shape[-1] == len(phone), phone
-
         if self.disable_bert:
             bert = torch.zeros(1024, len(phone))
             ja_bert = torch.zeros(768, len(phone))
