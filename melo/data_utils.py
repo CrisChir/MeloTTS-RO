@@ -148,6 +148,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                     center=False,
                 )
             spec = torch.squeeze(spec, 0)
+            os.makedirs(os.path.dirname(spec_filename), exist_ok=True)
             torch.save(spec, spec_filename)
         return spec, audio_norm
 
