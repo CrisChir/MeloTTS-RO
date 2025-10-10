@@ -198,9 +198,13 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))
             else:
-                raise
+                print(f"⚠️ Unknown language tag '{language_str}' in {wav_path}. Defaulting to zeroed BERT tensors.")
                 bert = torch.zeros(1024, len(phone))
                 ja_bert = torch.zeros(768, len(phone))
+
+                # raise
+                # bert = torch.zeros(1024, len(phone))
+                # ja_bert = torch.zeros(768, len(phone))
         assert bert.shape[-1] == len(phone)
         phone = torch.LongTensor(phone)
         tone = torch.LongTensor(tone)
