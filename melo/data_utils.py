@@ -153,9 +153,23 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             phone = commons.intersperse(phone, 0)
             tone = commons.intersperse(tone, 0)
             language = commons.intersperse(language, 0)
+            if not word2ph:
+                raise ValueError(f"Empty word2ph encountered for {wav_path}")
             for i in range(len(word2ph)):
                 word2ph[i] = word2ph[i] * 2
             word2ph[0] += 1
+
+
+        
+        # if self.add_blank:
+        #     phone = commons.intersperse(phone, 0)
+        #     tone = commons.intersperse(tone, 0)
+        #     language = commons.intersperse(language, 0)
+        #     for i in range(len(word2ph)):
+        #         word2ph[i] = word2ph[i] * 2
+        #     word2ph[0] += 1
+
+        
         # bert_path = wav_path.replace(".wav", ".bert.pt")
         rel_path = os.path.relpath(wav_path, "/kaggle/input/")
         bert_path = os.path.join("/kaggle/working/bert_features", rel_path).replace(".wav", ".bert.pt")
