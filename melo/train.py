@@ -76,9 +76,10 @@ def run():
         shuffle=True,
     )
     collate_fn = TextAudioSpeakerCollate()
+    ## initial num_workers =16
     train_loader = DataLoader(
         train_dataset,
-        num_workers=16,
+        num_workers=4,
         shuffle=False,
         pin_memory=True,
         collate_fn=collate_fn,
