@@ -12,7 +12,6 @@ language_module_map = {
     'FR': french, 
     'SP': spanish, 
     'ES': spanish, 
-    'MS': malay,
     'RO': romanian,  # <-- ADDITION
     'ro': romanian   # <-- ADDITION (for robustness)
 }
