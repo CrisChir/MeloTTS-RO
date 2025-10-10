@@ -1,5 +1,5 @@
 # punctuation = ["!", "?", "…", ",", ".", "'", "-"]
-punctuation = ["!", "?", "…", ",", ".", "'", "-", "¿", "¡"]
+punctuation = ["!", "?", "…", ",", ".", "'", "-", "~", "¡", "¿", '"']
 pu_symbols = punctuation + ["SP", "UNK"]
 pad = "_"
 
@@ -261,17 +261,84 @@ ru_symbols = [
 ]
 num_ru_tones = 1
 
+# --- ADDED FOR ROMANIAN ---
+# This is the new symbol list for Romanian
+# ro_symbols = [
+#     "a", "ə", "b", "d", "dʒ", "e", "f", "ɡ", "h", "i", "ɨ", "k", "l", "m",
+#     "n", "o", "p", "r", "s", "ʃ", "t", "ts", "tʃ", "u", "v", "z", "ʒ", "j",
+#     "w", "e̯a", "o̯a", "ă", "â", "î", "ș", "ț"
+# ]
+ro_symbols = [
+    ' ',
+    '!',
+    '"',
+    ',',
+    '-',
+    '.',
+    '1',
+    ':',
+    ';',
+    '?',
+    'a',
+    'b',
+    'd',
+    'e',
+    'f',
+    'h',
+    'i',
+    'j',
+    'k',
+    'l',
+    'm',
+    'n',
+    'o',
+    'p',
+    'r',
+    's',
+    't',
+    'u',
+    'v',
+    'w',
+    'z',
+    'á',
+    'é',
+    'í',
+    'ò',
+    'ü',
+    'đ',
+    'š',
+    'ǩ',
+    'ə',
+    'ɡ',
+    'ɨ',
+    'ʃ',
+    'ʒ',
+    '͡',
+    'ḱ',
+    '”',
+    '„',
+]
+num_ro_tones = 1
+# --- END OF ADDITION ---
+
+
 # combine all symbols
-normal_symbols = sorted(set(zh_symbols + ja_symbols + en_symbols + kr_symbols + es_symbols + fr_symbols + de_symbols + ru_symbols))
+# --- MODIFIED FOR ROMANIAN ---
+normal_symbols = sorted(set(zh_symbols + ja_symbols + en_symbols + kr_symbols + es_symbols + fr_symbols + de_symbols + ru_symbols + ro_symbols))
+# --- END OF MODIFICATION ---
 symbols = [pad] + normal_symbols + pu_symbols
 sil_phonemes_ids = [symbols.index(i) for i in pu_symbols]
 
 # combine all tones
-num_tones = num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones
+# --- MODIFIED FOR ROMANIAN ---
+num_tones = num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones + num_de_tones + num_ru_tones + num_ro_tones
+# --- END OF MODIFICATION ---
 
 # language maps
-language_id_map = {"ZH": 0, "JP": 1, "EN": 2, "ZH_MIX_EN": 3, 'KR': 4, 'ES': 5, 'SP': 5 ,'FR': 6}
-num_languages = len(language_id_map.keys())
+# --- MODIFIED FOR ROMANIAN ---
+language_id_map = {"ZH": 0, "JP": 1, "EN": 2, "ZH_MIX_EN": 3, 'KR': 4, 'ES': 5, 'SP': 5 ,'FR': 6, 'RO': 7, 'ro': 7}
+# --- END OF MODIFICATION ---
+num_languages = len(set(language_id_map.values())) # Using set for correctness
 
 language_tone_start_map = {
     "ZH": 0,
@@ -282,6 +349,11 @@ language_tone_start_map = {
     "ES": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
     "SP": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones,
     "FR": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones,
+    # --- ADDED FOR ROMANIAN ---
+    # The starting index is the sum of all previous languages' tone counts
+    "RO": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones,
+    "ro": num_zh_tones + num_ja_tones + num_en_tones + num_kr_tones + num_es_tones + num_fr_tones,
+    # --- END OF ADDITION ---
 }
 
 if __name__ == "__main__":
