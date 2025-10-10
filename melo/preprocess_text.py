@@ -5,12 +5,12 @@ from typing import Optional
 
 from tqdm import tqdm
 import click
-from .text.cleaner import clean_text_bert
+from melo.text.cleaner import clean_text_bert
 from glob import glob
 import os
 import torch
 import itertools
-from .text.symbols import symbols, num_languages, num_tones
+from melo.text.symbols import symbols, num_languages, num_tones
 
 # This version of the script from your repository does not support multiprocessing.
 # We will run it in a single process.
