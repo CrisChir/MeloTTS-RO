@@ -1,4 +1,4 @@
-# flake8: noqa: E402
+o# flake8: noqa: E402
 
 import os
 import torch
@@ -12,8 +12,8 @@ from tqdm import tqdm
 import logging
 
 logging.getLogger("numba").setLevel(logging.WARNING)
-import commons
-import utils
+import melo.commons
+import melo.utils
 from data_utils import (
     TextAudioSpeakerLoader,
     TextAudioSpeakerCollate,
