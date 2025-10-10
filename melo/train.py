@@ -249,7 +249,10 @@ def run():
         )
     else:
         scheduler_dur_disc = None
-    scaler = GradScaler(enabled=hps.train.fp16_run)
+    # scaler = GradScaler(enabled=hps.train.fp16_run) 
+    #future warning
+    scaler = torch.amp.GradScaler(enabled=hps.train.fp16_run)
+
 
     for epoch in range(epoch_str, hps.train.epochs + 1):
         try:
