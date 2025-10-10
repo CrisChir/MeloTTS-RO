@@ -48,6 +48,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         random.seed(1234)
         random.shuffle(self.audiopaths_sid_text)
         self._filter()
+        self.spec_cache_root = "/kaggle/working/spec_cache"
+        os.makedirs(self.spec_cache_root, exist_ok=True)
 
 
     def _filter(self):
@@ -115,7 +117,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         # NOTE: normalize has been achieved by torchaudio
         # audio_norm = audio / self.max_wav_value
         audio_norm = audio_norm.unsqueeze(0)
-        spec_filename = filename.replace(".wav", ".spec.pt")
+        # spec_filename = filename.replace(".wav", ".spec.pt")
+        rel_path = os.path.relpath(filename, "/kaggle/input/")
+        spec_filename = os.path.join("/kaggle/working/spec_cache", rel_path).replace(".wav", ".spec.pt")
         if self.use_mel_spec_posterior:
             spec_filename = spec_filename.replace(".spec.pt", ".mel.pt")
         try:
@@ -194,7 +198,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             if language_str in ["ZH"]:
                 bert = bert
                 ja_bert = torch.zeros(768, len(phone))
-            elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", 'SP', 'ES', 'FR', 'DE', 'RU']:
+            elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", 'SP', 'ES', 'FR', 'DE', 'RU', 'RO']:
                 ja_bert = bert
                 bert = torch.zeros(1024, len(phone))
             else:
