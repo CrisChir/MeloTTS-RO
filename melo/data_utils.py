@@ -192,24 +192,46 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             bert = get_bert(text, word2ph, language_str)
             torch.save(bert, bert_path)
             assert bert.shape[-1] == len(phone), phone
+
+
+
+
+
         if self.disable_bert:
             bert = torch.zeros(1024, len(phone))
             ja_bert = torch.zeros(768, len(phone))
         else:
-            if language_str in ["ZH"]:
-                bert = bert
+            if language_str == "ZH":
                 ja_bert = torch.zeros(768, len(phone))
             elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", 'SP', 'ES', 'FR', 'DE', 'RU', 'RO']:
-                ja_bert = bert
-                bert = torch.zeros(1024, len(phone))
-            else:
-                print(f"⚠️ Unknown language tag '{language_str}' in {wav_path}. Defaulting to zeroed BERT tensors.")
-                bert = torch.zeros(1024, len(phone))
-                ja_bert = torch.zeros(768, len(phone))
+                if bert.shape[0] == 768:
+                    ja_bert = bert
+                    bert = torch.zeros(1024, len(phone))
+                elif bert.shape[0] == 1024:
+                    bert = bert
+                    ja_bert = torch.zeros(768, len(phone))
+                else:
+                    print(f"⚠️ Unknown language tag '{language_str}' in {wav_path}. Defaulting to zeroed BERT tensors.")
+                    bert = torch.zeros(1024, len(phone))
+                    ja_bert = torch.zeros(768, len(phone))
+        # if self.disable_bert:
+        #     bert = torch.zeros(1024, len(phone))
+        #     ja_bert = torch.zeros(768, len(phone))
+        # else:
+        #     if language_str in ["ZH"]:
+        #         bert = bert
+        #         ja_bert = torch.zeros(768, len(phone))
+        #     elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", 'SP', 'ES', 'FR', 'DE', 'RU', 'RO']:
+        #         ja_bert = bert
+        #         bert = torch.zeros(1024, len(phone))
+        #     else:
+        #         print(f"⚠️ Unknown language tag '{language_str}' in {wav_path}. Defaulting to zeroed BERT tensors.")
+        #         bert = torch.zeros(1024, len(phone))
+        #         ja_bert = torch.zeros(768, len(phone))
 
-                # raise
-                # bert = torch.zeros(1024, len(phone))
-                # ja_bert = torch.zeros(768, len(phone))
+        #         # raise
+        #         # bert = torch.zeros(1024, len(phone))
+        #         # ja_bert = torch.zeros(768, len(phone))
         assert bert.shape[-1] == len(phone)
         phone = torch.LongTensor(phone)
         tone = torch.LongTensor(tone)
