@@ -309,6 +309,7 @@ def train_and_evaluate(
     net_d.train()
     if net_dur_disc is not None:
         net_dur_disc.train()
+    max_steps = hps.train.get("max_train_steps", None)
     for batch_idx, (
         x,
         x_lengths,
@@ -322,6 +323,11 @@ def train_and_evaluate(
         bert,
         ja_bert,
     ) in enumerate(tqdm(train_loader)):
+        if max_steps is not None and global_step >= max_steps:
+            break
+        if hps.train.get("max_train_steps") is not None and global_step >= hps.train.max_train_steps:
+            break
+
         if net_g.module.use_noise_scaled_mas:
             current_mas_noise_scale = (
                 net_g.module.mas_noise_scale_initial
