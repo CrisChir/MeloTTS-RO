@@ -325,8 +325,10 @@ def train_and_evaluate(
     ) in enumerate(tqdm(train_loader)):
         if max_steps is not None and global_step >= max_steps:
             break
-        if hps.train.get("max_train_steps") is not None and global_step >= hps.train.max_train_steps:
+
+        if hasattr(hps.train, "max_train_steps") and global_step >= hps.train.max_train_steps:
             break
+
 
         if net_g.module.use_noise_scaled_mas:
             current_mas_noise_scale = (
