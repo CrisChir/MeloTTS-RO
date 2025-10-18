@@ -2,8 +2,16 @@ import os
 import click
 import numpy as np
 from melo.api import TTS
-from melo.utils import split_sentences
+# from melo.utils import split_sentences
 import soundfile as sf
+import re
+
+def split_sentences(text):
+    """
+    Naive sentence splitter for Romanian.
+    Splits on punctuation followed by whitespace and a capital letter.
+    """
+    return [s.strip() for s in re.split(r'(?<=[.!?])\s+(?=[A-ZĂÂÎȘȚ])', text) if s.strip()]
 
 @click.command()
 @click.option('--ckpt_path', '-m', type=str, default=None, help="Path to the checkpoint file or directory")
