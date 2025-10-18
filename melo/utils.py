@@ -103,9 +103,9 @@ def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
         del word2ph
         assert bert.shape[-1] == len(phone), f"BERT len {bert.shape[-1]} vs phone len {len(phone)}"
 
-        if language_str == "ZH":
-            ja_bert = torch.zeros(768, len(phone))
-        elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", "SP", "ES", "FR", "DE", "RU", "RO"]:
+        if language_str in ["ZH", "RO"]:
+            ja_bert = torch.zeros(768, len(phone))  # don't use ja_bert for ZH or RO
+        elif language_str in ["JP", "EN", "ZH_MIX_EN", "KR", "SP", "ES", "FR", "DE", "RU"]:
             ja_bert = bert
             bert = torch.zeros(1024, len(phone))
         else:
@@ -117,8 +117,6 @@ def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
     tone = torch.LongTensor(tone)
     language = torch.LongTensor(language)
     return bert, ja_bert, phone, tone, language
-
-
 
 # def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
 #     norm_text, phone, tone, word2ph = clean_text(text, language_str)
