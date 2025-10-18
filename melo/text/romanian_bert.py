@@ -48,10 +48,36 @@ def get_bert_feature(text, word2ph, device=None):
         
         # Repeat the token's embedding for each phoneme it corresponds to.
         bert_features.extend([token_embedding] * ph_count)
-    
     if not bert_features:
-        # Handle cases where no features are generated (e.g., empty input).
-        return torch.empty(0, model.config.hidden_size)
+        return torch.empty(model.config.hidden_size, 0).to(device)
 
-    # Stack the list of tensors into a single tensor.
-    return torch.stack(bert_features)
+    bert_tensor = torch.stack(bert_features).T  # [hidden_dim, seq_len]
+    
+    # Align to phoneme length
+    if bert_tensor.shape[-1] > len(phone):
+        bert_tensor = bert_tensor[:, :len(phone)]
+    elif bert_tensor.shape[-1] < len(phone):
+        pad = torch.zeros(bert_tensor.shape[0], len(phone) - bert_tensor.shape[1], device=bert_tensor.device)
+        bert_tensor = torch.cat([bert_tensor, pad], dim=1)
+    
+    return bert_tensor
+
+    # if not bert_features:
+    #     # Handle cases where no features are generated (e.g., empty input).
+    #     return torch.empty(0, model.config.hidden_size)
+
+    # # Stack the list of tensors into a single tensor.
+    # bert_tensor = torch.stack(bert_features)
+    
+    # # Align to phoneme length
+    # target_len = sum(word2ph) * 2 if hps.data.add_blank else sum(word2ph)
+    # if bert_tensor.shape[0] > target_len:
+    #     bert_tensor = bert_tensor[:target_len]
+    # elif bert_tensor.shape[0] < target_len:
+    #     pad_len = target_len - bert_tensor.shape[0]
+    #     pad = torch.zeros(pad_len, bert_tensor.shape[1], device=bert_tensor.device)
+    #     bert_tensor = torch.cat([bert_tensor, pad], dim=0)
+    
+    # return bert_tensor.T  # shape: [hidden_dim, seq_len]
+
+    # return torch.stack(bert_features)
