@@ -1,12 +1,12 @@
 {
   "train": {
-    "log_interval": 200,
-    "eval_interval": 1000,
+    "log_interval": 250,
+    "eval_interval": 100,
     "seed": 52,
     "epochs": 100,
-    "max_train_steps": 770, 
+    "max_train_steps": 500, 
     "learning_rate": 0.0003,
-    "save_every_n_steps": 1000,
+    "save_every_n_steps": 500,
     "keep_last_n": 2,
     "use_tensorboard": false,
 
