@@ -63,4 +63,19 @@ This implementation is based on [TTS](https://github.com/coqui-ai/TTS), [VITS](h
 
 ## Demo script
 
+
+
+Due to disk and memory limitations, for demonstration purposes, the training was limited to a minimum, from 10,000 epochs to 100 and most importantly the number of steps was reduced from 48,000 to 500. The result after 5 hours is not usable in any way but just a conceptual sketch that can be used with suitable hardware. The dataset has approximately 60,000 samples, above the default configuration but less than the number of hours needed to perform a training. The training was customized after the MeloTTS-MS fork. It is not certain if the authors have documented everything for training another language. The biggest difficulty in MeloTTS is given by the Japanese language which uses a medium bert model 768, which leads to some inconsistencies that can cause errors. Another problem is the phonemization, MeloTTS uses Gruut, which is not available for Romanian, and since October 6, 2025 is archived. For the Romanian language, for reasons of simplicity, I used epitran, which achieves a relatively decent phonemization, but not at the gruut level. For a similar use, espeak should be used for Romanian.
+#### Original config
+    "epochs": 10000,
+    "max_train_steps": 48000, 
+    "batch_size": 6, (original dataset has bigger samples)
+#### Schetch config
+    "epochs": 100,
+    "max_train_steps": 500,
+    "batch_size": 10,( a smaler dataset  with smaler samples)
+### Training sketch
 https://www.kaggle.com/code/crischir/fork3-of-melotts-romanian-training?scriptVersionId=268926647
+
+### Inference  sketch
+https://www.kaggle.com/code/crischir/test-melotts-romanian-training
