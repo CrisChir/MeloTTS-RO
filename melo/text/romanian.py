@@ -45,54 +45,54 @@ def g2p(text):
         word2ph += distribute_phone(len(phone_list), len(group))
     return phones, tones, word2ph
 
-# def get_bert_feature(text, word2ph, device=None):
-#     from . import romanian_bert
-#     return romanian_bert.get_bert_feature(text, word2ph, device=device)
+def get_bert_feature(text, word2ph, device=None):
+    from . import romanian_bert
+    return romanian_bert.get_bert_feature(text, word2ph, device=device)
 
-def get_bert_feature(text, word2ph, device=None, phone_len=None):
-    model, tokenizer = get_model_and_tokenizer()
-    if device:
-        model = model.to(device)
+# def get_bert_feature(text, word2ph, device=None, phone_len=None):
+#     model, tokenizer = get_model_and_tokenizer()
+#     if device:
+#         model = model.to(device)
 
-    inputs = tokenizer(text, return_tensors="pt")
-    for i in inputs:
-        inputs[i] = inputs[i].to(model.device)
+#     inputs = tokenizer(text, return_tensors="pt")
+#     for i in inputs:
+#         inputs[i] = inputs[i].to(model.device)
 
-    with torch.no_grad():
-        outputs = model(**inputs)
-        last_hidden_state = outputs.last_hidden_state.squeeze(0)  # [seq_len, hidden_dim]
+#     with torch.no_grad():
+#         outputs = model(**inputs)
+#         last_hidden_state = outputs.last_hidden_state.squeeze(0)  # [seq_len, hidden_dim]
 
-    # Exclude [CLS] and [SEP]
-    hidden = last_hidden_state[1:-1]  # [num_tokens, hidden_dim]
-    num_tokens = hidden.shape[0]
+#     # Exclude [CLS] and [SEP]
+#     hidden = last_hidden_state[1:-1]  # [num_tokens, hidden_dim]
+#     num_tokens = hidden.shape[0]
 
-    # Safeguard: truncate word2ph if too long
-    if len(word2ph) > num_tokens:
-        print(f"[WARN] word2ph too long ({len(word2ph)} > {num_tokens}), truncating.")
-        word2ph = word2ph[:num_tokens]
+#     # Safeguard: truncate word2ph if too long
+#     if len(word2ph) > num_tokens:
+#         print(f"[WARN] word2ph too long ({len(word2ph)} > {num_tokens}), truncating.")
+#         word2ph = word2ph[:num_tokens]
 
-    # Build phoneme-aligned embeddings
-    bert_features = []
-    for i, ph_count in enumerate(word2ph):
-        token_embedding = hidden[i]
-        bert_features.extend([token_embedding] * ph_count)
+#     # Build phoneme-aligned embeddings
+#     bert_features = []
+#     for i, ph_count in enumerate(word2ph):
+#         token_embedding = hidden[i]
+#         bert_features.extend([token_embedding] * ph_count)
 
-    if not bert_features:
-        return torch.empty(model.config.hidden_size, 0).to(model.device)
+#     if not bert_features:
+#         return torch.empty(model.config.hidden_size, 0).to(model.device)
 
-    bert_tensor = torch.stack(bert_features).T  # [hidden_dim, num_phoneme]
+#     bert_tensor = torch.stack(bert_features).T  # [hidden_dim, num_phoneme]
 
-    # Optional alignment
-    if phone_len is not None:
-        if bert_tensor.shape[1] > phone_len:
-            bert_tensor = bert_tensor[:, :phone_len]
-        elif bert_tensor.shape[1] < phone_len:
-            pad = torch.zeros(model.config.hidden_size, phone_len - bert_tensor.shape[1], device=model.device)
-            bert_tensor = torch.cat([bert_tensor, pad], dim=1)
+#     # Optional alignment
+#     if phone_len is not None:
+#         if bert_tensor.shape[1] > phone_len:
+#             bert_tensor = bert_tensor[:, :phone_len]
+#         elif bert_tensor.shape[1] < phone_len:
+#             pad = torch.zeros(model.config.hidden_size, phone_len - bert_tensor.shape[1], device=model.device)
+#             bert_tensor = torch.cat([bert_tensor, pad], dim=1)
 
-    # Final check
-    print(f"[INFO] BERT tensor shape: {bert_tensor.shape}, expected phoneme count: {sum(word2ph)}")
-    return bert_tensor
+#     # Final check
+#     print(f"[INFO] BERT tensor shape: {bert_tensor.shape}, expected phoneme count: {sum(word2ph)}")
+#     return bert_tensor
 
 
 print("✅ SUCCESS: Self-contained romanian.py created.")
