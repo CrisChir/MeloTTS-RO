@@ -34,7 +34,8 @@ def clean_text_bert(text, language, device=None):
         word2ph[i] = word2ph[i] * 2
     word2ph[0] += 1
     bert = language_module.get_bert_feature(norm_text, word2ph, device=device)
-    
+    print(f"[DEBUG] Phones: {len(phones)}, word2ph: {word2ph}, sum: {sum(word2ph)}")
+
     return norm_text, phones, tones, word2ph_bak, bert
 
 
